@@ -209,7 +209,9 @@ app.post('/api/placeOrder', async (req, res) => {
   }
 });
 
-
+app.get('/', (req, res) => {
+  res.send(`Server is running on port ${PORT}`);
+});
 
 // Start the server
 app.listen(PORT, () => {
