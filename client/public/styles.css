@@ -1,0 +1,342 @@
+/* Color Variables */
+:root {
+    --waikawa-gray: #5b67a3;
+    --valencia: #d34b48;
+    --de-york: #8ccb9f;
+    --wafer: #e5d2d4;
+    --crail: #ba5d45;
+    --antique-brass: #caa077;
+    --ronchi: #eebd61;
+    --twine: #bc8850;
+    --woodland: #4e552c;
+    --conch: #d3e0d8;
+  }
+  
+  /* General Body Styles */
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--wafer);
+    color: var(--waikawa-gray);
+  }
+  
+  /* Header */
+  header {
+    background-color: var(--ronchi);
+    color: var(--wafer);
+    text-align: center;
+    padding: 20px;
+  }
+  
+  /* Navbar */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: var(--woodland);
+  }
+  
+  .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--wafer);
+  }
+  
+  .navLinks {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .navLinks a {
+    color: var(--wafer);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .navLinks a:visited {
+    color: var(--wafer);
+  }
+  
+  .navLinks a:hover {
+    color: var(--de-york); /* Hover color */
+  }
+  
+  /* Main Content */
+  #body {
+    background-color: var(--de-york);
+  }
+  main {
+    padding: 20px;
+    text-align: center;
+  }
+  
+  section {
+    margin-bottom: 40px;
+  }
+  
+  section h2 {
+    color: var(--woodland);
+    font-size: 2em;
+  }
+  
+  section p {
+    color: var(--woodland);
+    font-size: 1.2em;
+    line-height: 1.6;
+  }
+  
+  #home {
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  #homeImg {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+  
+  #about {
+    padding: 20px;
+    text-align: center;
+    background-color: var(--twine);
+    border-radius: 8px;
+  }
+  /*Buy a copy page*/
+  .buy-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    height: auto;
+  }
+  
+  @media (min-width: 768px) {
+    .buy-container {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+  }
+  
+  
+  .image-container {
+    width: auto;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    flex-shrink: 0;
+    margin-left: 10vw;
+  }
+  
+  .image {
+    object-fit: contain;
+    width: auto;
+    height: 50vh;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .details-container {
+    flex: 1;
+    text-align: center;
+    align-items: center;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    margin-right: 10vw;
+  }
+  
+  .details-container button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    background-color: var(--waikawa-gray);
+    color: var(--wafer);
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+  .details-container button:hover {
+    background-color: var(--de-york);
+  }
+  @media (max-width: 768px) {
+    .buy-container {
+      flex-direction: column; /* Stack elements vertically */
+      padding: 1rem;
+    }
+  
+    .image-container img {
+      height: 30vh; /* Adjust image size for smaller screens */
+      margin:;
+    }
+  
+    .details-container {
+      font-size: 1rem; /* Scale down text size */
+    }
+  }
+  .title {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+  
+  .description {
+    font-size: 1rem;
+    color: var(--waikawa-gray);
+  }
+  
+  .quantity-container {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .quantity-label {
+    font-size: 1rem;
+    margin-bottom: 5px;
+  }
+  
+  .quantity-select {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid var(--wafer);
+    border-radius: 5px;
+  }
+  
+  .price-container {
+    font-size: 1.2rem;
+    margin: 10px 0;
+  }
+  
+  .price-value {
+    font-weight: bold;
+    color: var(--waikawa-gray);
+  }
+  /* Buttons */
+  button {
+    background-color: var(--de-york);
+    border: none;
+    padding: 10px 20px;
+    color: var(--wafer);
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  
+  button:hover {
+    background-color: var(--crail);
+  }
+  .checkout-button {
+    background-color: var(--waikawa-gray);
+    color: var(--wafer);
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .checkout-button:hover {
+    background-color: var(--waikawa-gray);
+  }
+  
+  /* Checkout page */
+  .checkout-container {
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .title {
+    font-size: 2em;
+    margin-bottom: 20px;
+  }
+  
+  /* Make the form a flex container with vertical direction */
+  .address-form {
+    display: flex;
+    flex-direction: column; /* Stacks elements vertically */
+    gap: 15px; /* Adds spacing between the elements */
+  }
+  
+  .address-form label {
+    font-size: 1.1em;
+    margin-bottom: 5px;
+  }
+  
+  .address-form input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: 1px solid var(--conch);
+  }
+  
+  .confirm-button {
+    background-color: var(--de-york);
+    color: var(--woodland);
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100%;
+    font-size: 16px;
+  }
+  
+  .confirm-button:disabled {
+    background-color: var(--conch);
+  }
+  
+  .error {
+    color: var(--valencia);
+    font-size: 1.2em;
+    margin-top: 20px;
+  }
+  
+  .shipping-details {
+    margin-top: 20px;
+  }
+  
+  /* Footer */
+  footer {
+    padding: 20px;
+    text-align: center;
+    background-color: var(--woodland);
+    color: var(--wafer);
+    border-top: 1px solid var(--antique-brass);
+    margin-top: 20px;
+  }
+  
+  /* Card Components */
+  .card {
+    background-color: var(--wafer);
+    border: 1px solid var(--antique-brass);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
+  }
+  
+  .card:hover {
+    transform: scale(1.05);
+  }
+  
+  .card h3 {
+    color: var(--ronchi);
+  }
+  
+  .card p {
+    color: var(--woodland);
+  }
+  
