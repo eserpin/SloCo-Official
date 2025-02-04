@@ -19,13 +19,7 @@ const shippo = new Shippo({
   apiKeyHeader: process.env.SHIPPO_TOKEN,
   shippoApiVersion: '2018-02-08',
 });
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASS,
-  port: process.env.DB_PORT,
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Define the addressFrom (Sender's address)
 const addressFrom = {
@@ -173,8 +167,15 @@ app.post('/api/placeOrder', async (req, res) => {
         pass: process.env.GMAIL_APP_PASS,  // Access the password from the environment variable
       },
     });
-    // HERE IS WHERE I WANT TO SAVE THE DATA TO THE DATABASE
+    const query = `
+            INSERT INTO orders (transaction_id, name, email, quantity, total)
+            VALUES ($1, $2, $3, $4, $5) RETURNING *;
+        `;
+    const values = [transactionId, name, email, quantity, total];
 
+    const { rows } = await pool.query(query, values);
+    console.log('✅ Order saved to database:', rows[0]);
+    
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',  // Recipient email
