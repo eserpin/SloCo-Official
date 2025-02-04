@@ -174,8 +174,11 @@ app.post('/api/placeOrder', async (req, res) => {
     const values = [transactionId, name, email, quantity, total];
 
     const { rows } = await pool.query(query, values);
+    if (rows.length === 0) {
+      throw new Error('Order was not saved in the database.');
+  }
     console.log('✅ Order saved to database:', rows[0]);
-    
+
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',  // Recipient email
