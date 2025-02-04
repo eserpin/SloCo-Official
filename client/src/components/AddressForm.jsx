@@ -12,7 +12,8 @@ const AddressForm = ({ onAddressSelect }) => {
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
     libraries: googleLibraries, // Pass the static libraries array here
   });
-
+  console.log("google maps key: " + process.env.REACT_APP_GOOGLE_MAPS_KEY);
+  console.log(process.env);
   const handleOnPlacesChanged = () => {
     if (inputRef.current) {
       const places = inputRef.current.getPlaces();
