@@ -162,7 +162,7 @@ app.post('/api/placeOrder', async (req, res) => {
     // Step 5: Save the order to the database
     const query = `
       INSERT INTO orders (transaction_id, name, email, quantity)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *;
+      VALUES ($1, $2, $3, $4) RETURNING *;
     `;
     const values = [transactionId, name, email, quantity];
 
