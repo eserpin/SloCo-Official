@@ -167,17 +167,17 @@ app.post('/api/placeOrder', async (req, res) => {
         pass: process.env.GMAIL_APP_PASS,  // Access the password from the environment variable
       },
     });
-    const query = `
-            INSERT INTO orders (transaction_id, name, email, quantity, total)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *;
-        `;
-    const values = [transactionId, name, email, quantity, total];
+  //   const query = `
+  //           INSERT INTO orders (transaction_id, name, email, quantity, total)
+  //           VALUES ($1, $2, $3, $4, $5) RETURNING *;
+  //       `;
+  //   const values = [transactionId, name, email, quantity, total];
 
-    const { rows } = await pool.query(query, values);
-    if (rows.length === 0) {
-      throw new Error('Order was not saved in the database.');
-  }
-    console.log('✅ Order saved to database:', rows[0]);
+  //   const { rows } = await pool.query(query, values);
+  //   if (rows.length === 0) {
+  //     throw new Error('Order was not saved in the database.');
+  // }
+  //   console.log('✅ Order saved to database:', rows[0]);
 
     const mailOptions = {
       from: process.env.GMAIL_USER,
