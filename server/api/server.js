@@ -159,15 +159,7 @@ app.post('/api/placeOrder', async (req, res) => {
       return res.status(400).json({ error: transaction.error.message });
     }
    console.log('✅ Transaction created successfully:', transaction);
-    // Step 5: Send the shipping label via email to slow.comics.publishing@gmail.com
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,  // Access the email from the environment variable
-        pass: process.env.GMAIL_APP_PASS,  // Access the password from the environment variable
-      },
-    });
-  //   const query = `
+    //   const query = `
   //           INSERT INTO orders (transaction_id, name, email, quantity, total)
   //           VALUES ($1, $2, $3, $4, $5) RETURNING *;
   //       `;
@@ -178,27 +170,31 @@ app.post('/api/placeOrder', async (req, res) => {
   //     throw new Error('Order was not saved in the database.');
   // }
   //   console.log('✅ Order saved to database:', rows[0]);
+    // Step 5: Send the shipping label via email to slow.comics.publishing@gmail.com
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,  // Access the email from the environment variable
+        pass: process.env.GMAIL_APP_PASS,  // Access the password from the environment variable
+      },
+    });
 
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',  // Recipient email
       subject: 'Shipping Label for Order #' + transactionId,
-      text: 'Please find the attached shipping label for your order: ' + transaction.labelUrl,
-      attachments: [
-        {
-          filename: 'shipping-label.pdf',  // Name of the file to be sent
-          content: Buffer.from(transaction.labelUrl, 'base64'),  // The label URL returned by Shippo in base64
-          encoding: 'base64',
-        },
-      ],
+      text: 'Please find the attached shipping label for your order: ' + transaction.labelUrl
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error('❌ Error sending email:', error);
-        return res.status(500).json({ error: 'An error occurred while sending the email.' });
+        if (!res.headersSent) {
+          return res.status(500).json({ error: 'An error occurred while sending the email.' });
+        }
+      } else {
+        console.log('✅ Email sent successfully:', info.response);
       }
-      console.log('✅ Email sent successfully:', info.response);
     });
 
     // Step 6: Respond with shipment ID and success message
