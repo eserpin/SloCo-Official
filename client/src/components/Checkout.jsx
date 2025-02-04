@@ -60,7 +60,7 @@ export const Checkout = () => {
     setError(null);
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/shippingCalculation`, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}api/shippingCalculation`, {
         addressTo: address,
         quantity,
       });
@@ -129,7 +129,7 @@ export const Checkout = () => {
     const order = await actions.order.capture(); // Capture the payment
 
     // Send order details to your backend for order processing
-    await axios.post(`${process.env.REACT_APP_API_URL}/api/placeOrder`, {
+    await axios.post(`${process.env.REACT_APP_API_URL}api/placeOrder`, {
       name: address.name,
       email: address.email,
       quantity,
