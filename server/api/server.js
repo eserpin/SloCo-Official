@@ -159,7 +159,20 @@ app.post('/api/placeOrder', async (req, res) => {
     }
     console.log('✅ Transaction created successfully:', transaction);
 
-    // Step 5: Send the shipping label via email to slow.comics.publishing@gmail.com
+    // Step 5: Save the order to the database
+    const query = `
+      INSERT INTO orders (transaction_id, name, email, quantity, total)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *;
+    `;
+    const values = [transactionId, name, email, quantity, total];
+
+    const { rows } = await pool.query(query, values);
+    if (rows.length === 0) {
+      throw new Error('Order was not saved in the database.');
+    }
+    console.log('✅ Order saved to database:', rows[0]);
+
+    // Step 6: Send the shipping label via email to slow.comics.publishing@gmail.com
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -198,14 +211,14 @@ app.post('/api/placeOrder', async (req, res) => {
       return res.status(500).json({ error: 'An error occurred while sending the email.' });
     }
 
-    // Step 6: Respond with shipment ID and success message
+    // Step 7: Respond with shipment ID and success message
     res.status(200).json({
-      message: 'Order placed successfully! Label created and emailed.',
+      message: 'Order placed successfully! Label created, emailed, and order saved.',
       shipment_id: shipment.objectId,
     });
 
   } catch (error) {
-    console.error('❌ Error creating shipment, label or sending email:', error);
+    console.error('❌ Error creating shipment, label, saving order, or sending email:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'An error occurred while processing your order.' });
     }
