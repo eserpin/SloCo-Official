@@ -107,14 +107,12 @@ app.post('/api/placeOrder', async (req, res) => {
   }
 
   try {
- 
-
     // Step 1: Create the shipment in Shippo
     const shipment = await shippo.shipments.create({
       addressFrom,  // Sender's address
       addressTo: address,    // Receiver's address
       parcels: [{
-        weight: (2.5*quantity).toString(),  // Total weight in lbs
+        weight: (2.5 * quantity).toString(),  // Total weight in lbs
         length: "9.25",  // Adjust based on parcel details
         width: "6.25",
         height: (1 * quantity).toString(),  // Height = 1 * quantity (dynamic based on quantity)
@@ -146,6 +144,7 @@ app.post('/api/placeOrder', async (req, res) => {
 
     console.log('✅ Cheapest UPS/USPS rate selected:', cheapestRate);
     console.log("variables: " + cheapestRate.objectId + ", " + shipment.objectId);
+
     // Step 4: Create a transaction using the cheapest rate
     const transaction = await shippo.transactions.create({
       async: false,  // Process the transaction synchronously
@@ -158,18 +157,8 @@ app.post('/api/placeOrder', async (req, res) => {
     if (transaction.error) {
       return res.status(400).json({ error: transaction.error.message });
     }
-   console.log('✅ Transaction created successfully:', transaction);
-    //   const query = `
-  //           INSERT INTO orders (transaction_id, name, email, quantity, total)
-  //           VALUES ($1, $2, $3, $4, $5) RETURNING *;
-  //       `;
-  //   const values = [transactionId, name, email, quantity, total];
+    console.log('✅ Transaction created successfully:', transaction);
 
-  //   const { rows } = await pool.query(query, values);
-  //   if (rows.length === 0) {
-  //     throw new Error('Order was not saved in the database.');
-  // }
-  //   console.log('✅ Order saved to database:', rows[0]);
     // Step 5: Send the shipping label via email to slow.comics.publishing@gmail.com
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -177,25 +166,37 @@ app.post('/api/placeOrder', async (req, res) => {
         user: process.env.GMAIL_USER,  // Access the email from the environment variable
         pass: process.env.GMAIL_APP_PASS,  // Access the password from the environment variable
       },
+      logger: true,  // Enable Nodemailer logging
+      debug: true,   // More detailed output of the communication with the email server
     });
 
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',  // Recipient email
       subject: 'Shipping Label for Order #' + transactionId,
-      text: 'Please find the attached shipping label for your order: ' + transaction.labelUrl
+      text: 'Please find the attached shipping label for your order: ' + transaction.labelUrl,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('❌ Error sending email:', error);
-        if (!res.headersSent) {
-          return res.status(500).json({ error: 'An error occurred while sending the email.' });
-        }
-      } else {
-        console.log('✅ Email sent successfully:', info.response);
-      }
-    });
+    // Convert the email sending function to a Promise-based approach
+    const sendEmail = (mailOptions) => {
+      return new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(info);
+          }
+        });
+      });
+    };
+
+    try {
+      await sendEmail(mailOptions);
+      console.log('✅ Email sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending email:', error);
+      return res.status(500).json({ error: 'An error occurred while sending the email.' });
+    }
 
     // Step 6: Respond with shipment ID and success message
     res.status(200).json({
@@ -205,7 +206,9 @@ app.post('/api/placeOrder', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error creating shipment, label or sending email:', error);
-    res.status(500).json({ error: 'An error occurred while processing your order.' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'An error occurred while processing your order.' });
+    }
   }
 });
 
