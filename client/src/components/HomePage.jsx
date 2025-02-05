@@ -9,9 +9,8 @@ export const HomePage = () => {
       <NavBar />
       <section id="home">
         <img id="homeImg"
-          src={promo} // Replace with your image path
+          src={promo} 
           alt="Comic Book Preview"
-          style={{ maxWidth: '65%', height: 'auto' }}
         />
       </section>
       <section id="about" class="home-page-section">

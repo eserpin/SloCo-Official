@@ -36,12 +36,20 @@
     align-items: center;
     padding: 10px 20px;
     background-color: var(--woodland);
+    white-space: nowrap; /* Prevents text from wrapping */
+    overflow-x: auto; /* Enables horizontal scrolling */
+    scrollbar-width: none; /* Hides scrollbar in Firefox */
+    -ms-overflow-style: none; /* Hides scrollbar in IE/Edge */
   }
-  
-  .logo {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--wafer);
+  .nav-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-bar a {
+    flex-shrink: 0; /* Prevents items from shrinking */
+  }
+  #nav-logo {
+    max-width: 100px;
+    height: auto; /* Maintains aspect ratio */
   }
   
   .navLinks {
@@ -95,9 +103,21 @@
   }
   
   #homeImg {
-    max-width: 100%;
+    max-width: 70%;
     height: auto;
+    max-height: 60vh;
     border-radius: 10px;
+  }
+  @media (max-width: 768px) {
+    #homeImg {
+      max-width: 90%; /* Increases size on smaller screens */
+    }
+  }
+  
+  @media (max-width: 480px) {
+    #homeImg {
+      max-width: 100%; /* Ensures it takes up almost the full width */
+    }
   }
   
   .home-page-section {
@@ -115,6 +135,7 @@
     gap: 1rem;
     padding: 2rem;
     height: auto;
+    text-align: center; /* Ensures text alignment is consistent */
   }
   
   @media (min-width: 768px) {
@@ -124,15 +145,14 @@
     }
   }
   
-  
   .image-container {
     width: auto;
     flex: 1;
     display: flex;
     align-items: center;
-    justify-content: left;
+    justify-content: center; /* Ensure it’s centered horizontally */
     flex-shrink: 0;
-    margin-left: 10vw;
+    margin: 0; /* Reset margin */
   }
   
   .image {
@@ -150,8 +170,7 @@
     max-width: 400px;
     display: flex;
     flex-direction: column;
-    margin: auto;
-    margin-right: 10vw;
+    margin: auto; /* Centers it horizontally */
   }
   
   .details-container button {
@@ -163,24 +182,33 @@
     border-radius: 0.5rem;
     cursor: pointer;
   }
+  
   .details-container button:hover {
     background-color: var(--de-york);
   }
+  
+  /* Mobile adjustments */
   @media (max-width: 768px) {
     .buy-container {
       flex-direction: column; /* Stack elements vertically */
       padding: 1rem;
     }
   
+    .image-container {
+      justify-content: center; /* Center image */
+      margin: 0 auto;
+    }
+  
     .image-container img {
       height: 30vh; /* Adjust image size for smaller screens */
-      margin:;
     }
   
     .details-container {
       font-size: 1rem; /* Scale down text size */
+      margin: auto; /* Ensure it's centered */
     }
   }
+  
   .title {
     font-size: 2rem;
     font-weight: bold;
@@ -217,6 +245,7 @@
     font-weight: bold;
     color: var(--waikawa-gray);
   }
+  
   /* Buttons */
   button {
     background-color: var(--de-york);

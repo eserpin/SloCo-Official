@@ -6,7 +6,7 @@ const NavBar = () => {
 
   return (
     <nav>
-      <img src={logo} alt="Logo" style={{ maxWidth: "150px", maxHeight: "100px" }} />
+      <img id="nav-logo" src={logo} alt="Logo" />
       <ul className="navLinks"> {/* Add the class here */}
         <li><Link to="/">Home</Link></li>
         <li><HashLink
