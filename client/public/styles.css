@@ -238,7 +238,16 @@
   
   .price-container {
     font-size: 1.2rem;
+    font-weight: bold;
     margin: 10px 0;
+  }
+  .original-price {
+    text-decoration: line-through;
+    color: var(--waikawa-gray);
+    margin-right: 8px;
+  }
+  .discount-price {
+    color: var(--valencia);
   }
   
   .price-value {

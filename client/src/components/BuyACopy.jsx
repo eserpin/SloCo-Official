@@ -27,9 +27,12 @@ export const BuyACopy = () => {
 
         {/* Right: Quantity and Price */}
         <div className="details-container">
-          <h1 className="title">Preorder a Copy</h1>
+          <h1 className="title">Preorder Now!</h1>
           <p className="description">
             Coming in April 2025!
+          </p>
+          <p className="description">
+          25% Discount with Preorder!
           </p>
 
           <div className="quantity-container">
@@ -51,9 +54,10 @@ export const BuyACopy = () => {
           </div>
 
           <div className="price-container">
-            <p className="price">
-              Total Price: <span className="price-value">${totalPrice}</span>
-            </p>
+          <div className="price">
+            <span className="original-price">$27</span>
+            <span className="discount-price">$20</span>
+          </div>
           </div>
 
           {/* Check Out Button */}

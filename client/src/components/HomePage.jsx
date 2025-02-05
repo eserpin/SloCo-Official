@@ -22,7 +22,7 @@ export const HomePage = () => {
       <section id="sellers" class="home-page-section">
         <h2>Want to sell our book?</h2>
         <p>
-          Contact us at slow.comics.publishing@gmail.com to discuss rates
+          Contact us at slow.comics.publishing@gmail.com
         </p>
       </section>
       <Footer />
