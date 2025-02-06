@@ -95,14 +95,14 @@ export const Checkout = () => {
     console.log("Shipping Address: ", address);
     console.log("Currency: ", currency);  // Should be "USD" or a supported currency
     console.log("Total: ", total);  // Should be a valid number
-
+    console.log("testing with $1 order");
     try {
       return await actions.order.create({
         purchase_units: [
           {
             amount: {
               currency_code: currency,
-              value: total.toFixed(2),
+              value: "1.00" // total.toFixed(2),
             },
             shipping: {
               address: {
