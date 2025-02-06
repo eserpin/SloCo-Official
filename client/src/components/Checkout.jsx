@@ -24,7 +24,6 @@ export const Checkout = () => {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [subtotal, setSubtotal] = useState(20);
-  const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
 
   const location = useLocation();
@@ -76,12 +75,10 @@ export const Checkout = () => {
 
         const lowestShippingPrice = sortedRates[0].amount;
 
-        const tax = subtotal * 0.1;
-        const total = subtotal + tax + lowestShippingPrice;
+        const total = subtotal + lowestShippingPrice;
 
         setShippingPrice(lowestShippingPrice);
         setEstimatedDelivery(sortedRates[0].servicelevel.name);
-        setTax(tax);
         setTotal(total);
       } else {
         setError("No shipping rates available.");
@@ -198,9 +195,6 @@ export const Checkout = () => {
               <h2>Shipping Breakdown</h2>
               <p>
                 <strong>Subtotal:</strong> ${subtotal.toFixed(2)}
-              </p>
-              <p>
-                <strong>Tax:</strong> ${tax.toFixed(2)}
               </p>
               <p>
                 <strong>Shipping:</strong> ${shippingPrice.toFixed(2)}
