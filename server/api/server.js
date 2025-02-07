@@ -129,9 +129,11 @@ app.post('/api/placeOrder', async (req, res) => {
     console.log('✅ Shipment created successfully');
 
     // Step 2: Filter the rates for UPS and USPS only
-    const filteredRates = shipment.rates.filter(rate => 
-      rate.provider === 'UPS' || rate.provider === 'USPS'
-    );
+    const filteredRates = shipment.rates;
+    
+    // .filter(rate => 
+    //   rate.provider === 'UPS' || rate.provider === 'USPS'
+    // );
 
     // If no valid rates are found, return an error
     if (filteredRates.length === 0) {
