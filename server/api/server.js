@@ -110,19 +110,19 @@ app.post('/api/placeOrder', async (req, res) => {
   description: "Graphic Novel",
   quantity: quantity,
   netWeight: (2.5*quantity).toFixed(2), // Dynamically calculated
-  massUnit: WeightUnitEnum.Lb,
+  massUnit: "lb",
   valueAmount: (20 * quantity).toFixed(2), // Dynamically calculated
   valueCurrency: "USD",
   originCountry: "US",
   }
   try {
     const customsDeclaration = await shippo.customsDeclarations.create({
-      contentsType: CustomsDeclarationContentsTypeEnum.Merchandise,
-    contentsExplanation: "Graphic Novel",
-    nonDeliveryOption: CustomsDeclarationNonDeliveryOptionEnum.Return,
-    certify: true,
-    certifySigner: "Anil Serpin",
-    items: [customsItem],
+      contentsType: "MERCHANDISE",
+      contentsExplanation: "Graphic Novel",
+      nonDeliveryOption: "RETURN",
+      certify: true,
+      certifySigner: "Anil Serpin",
+      items: [customsItem],
     });
     console.log("customs declaration: " + customsDeclaration);
     const shipment = await shippo.shipments.create({
