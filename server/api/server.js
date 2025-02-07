@@ -106,9 +106,25 @@ app.post('/api/placeOrder', async (req, res) => {
   if (!name || !email || !quantity || !total || !transactionId || !address) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-
+  const customsItem = {
+  description: "Graphic Novel",
+  quantity: quantity,
+  netWeight: (2.5*quantity).toFixed(2), // Dynamically calculated
+  massUnit: WeightUnitEnum.Lb,
+  valueAmount: (20 * quantity).toFixed(2), // Dynamically calculated
+  valueCurrency: "USD",
+  originCountry: "US",
+  }
   try {
-    // Step 1: Create the shipment in Shippo
+    const customsDeclaration = await shippo.customsDeclarations.create({
+      contentsType: CustomsDeclarationContentsTypeEnum.Merchandise,
+    contentsExplanation: "Graphic Novel",
+    nonDeliveryOption: CustomsDeclarationNonDeliveryOptionEnum.Return,
+    certify: true,
+    certifySigner: "Anil Serpin",
+    items: [customsItem],
+    });
+    console.log("customs declaration: " + customsDeclaration);
     const shipment = await shippo.shipments.create({
       addressFrom,  // Sender's address
       addressTo: address,    // Receiver's address
@@ -120,23 +136,7 @@ app.post('/api/placeOrder', async (req, res) => {
         massUnit: "lb",  // Weight unit in lbs
         distanceUnit: "in"  // Dimension unit in inches
       }],
-      customs_declaration: {
-        contents_type: "merchandise",
-        contents_explanation: "Graphic novel",
-        non_delivery_option: "return",
-        certify: true,
-        certify_signer: "Anil Serpin",
-        items: [
-          {
-            description: "Graphic novel",
-            quantity: quantity,
-            value_amount: (20 * quantity).toFixed(2), // Dynamically calculated
-            value_currency: "USD",
-            origin_country: "US",
-            weight: (2.5 * quantity).toString()
-          }
-        ]
-      }
+      customs_declaration: customsDeclaration.object_id
     });
 
     // Check if shipment creation was successful
