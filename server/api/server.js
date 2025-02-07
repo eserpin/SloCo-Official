@@ -130,7 +130,7 @@ app.post('/api/placeOrder', async (req, res) => {
           {
             description: "Graphic novel",
             quantity: quantity,
-            value_amount: valueAmount, // Dynamically calculated
+            value_amount: (20 * quantity).toFixed(2), // Dynamically calculated
             value_currency: "USD",
             origin_country: "US",
             weight: (2.5 * quantity).toString()
