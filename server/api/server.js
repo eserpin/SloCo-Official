@@ -73,9 +73,10 @@ app.post('/api/shippingCalculation', async (req, res) => {
     }
 
     // Step 3: Filter the rates to include only UPS and USPS
-    const filteredRates = rates.filter(rate => {
-      return rate.provider === "UPS" || rate.provider === "USPS";
-    });
+    const filteredRates = rates;
+    // .filter(rate => {
+    //   return rate.provider === "UPS" || rate.provider === "USPS";
+    // });
 
     // If no rates from UPS or USPS are available, return an error
     if (filteredRates.length === 0) {
