@@ -101,8 +101,7 @@ export const Checkout = () => {
         purchase_units: [
           {
             amount: {
-              currency_code: currency,
-              value: "1.00"// total.toFixed(2),
+              value: "0.01" // total.toFixed(2)
             },
             shipping: {
               address: {

@@ -124,7 +124,7 @@ app.post('/api/placeOrder', async (req, res) => {
       certifySigner: "Anil Serpin",
       items: [customsItem],
     });
-    console.log("customs declaration: " + customsDeclaration);
+    console.log("customs declaration: " + JSON.stringify(customsDeclaration));
     const shipment = await shippo.shipments.create({
       addressFrom,  // Sender's address
       addressTo: address,    // Receiver's address
