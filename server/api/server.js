@@ -120,6 +120,23 @@ app.post('/api/placeOrder', async (req, res) => {
         massUnit: "lb",  // Weight unit in lbs
         distanceUnit: "in"  // Dimension unit in inches
       }],
+      customs_declaration: {
+        contents_type: "merchandise",
+        contents_explanation: "Graphic novel",
+        non_delivery_option: "return",
+        certify: true,
+        certify_signer: "Anil Serpin",
+        items: [
+          {
+            description: "Graphic novel",
+            quantity: quantity,
+            value_amount: valueAmount, // Dynamically calculated
+            value_currency: "USD",
+            origin_country: "US",
+            weight: (2.5 * quantity).toString()
+          }
+        ]
+      }
     });
 
     // Check if shipment creation was successful
