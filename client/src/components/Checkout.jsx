@@ -16,6 +16,7 @@ export const Checkout = () => {
     state: "",
     zip: "",
     country: "US",
+    phone: ""
   });
   const [shippingPrice, setShippingPrice] = useState(null);
   const [currency, setCurrency] = useState("USD");
@@ -111,6 +112,7 @@ export const Checkout = () => {
                 admin_area_1: address.state,
                 postal_code: address.zip,
                 country_code: countryCodes[address.country] || "US",
+                phone: address.phone,  // Add phone number here
               },
             },
           },
@@ -168,6 +170,16 @@ export const Checkout = () => {
                 name="email"
                 value={address.email}
                 onChange={(e) => setAddress({ ...address, email: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+            Phone Number
+              <input
+                type="text"
+                name="phone"
+                value={address.phone}
+                onChange={(e) => setAddress({ ...address, phone: e.target.value })}
                 required
               />
             </label>
