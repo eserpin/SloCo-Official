@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const Shippo = require('shippo').Shippo;
-const nodemailer = require('nodemailer'); 
+const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
 require('dotenv').config({ path: '../.env' });
@@ -76,7 +76,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
         }],
         customsDeclaration: customsDeclaration.objectId,
       });
-    
+
     // Check if shipment creation was successful
     if (shipment.error) {
       return res.status(400).json({ error: shipment.error.message });
@@ -85,7 +85,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
     // Step 2: Get shipping rates for the shipment
     const rates = shipment.rates;
     console.log('Got to step 2 - getting rates.');
-    
+
     if (rates.length === 0) {
       return res.status(400).json({ error: 'No rates available for this shipment.' });
     }
@@ -165,8 +165,8 @@ app.post('/api/placeOrder', async (req, res) => {
 
     // Step 2: Filter the rates for UPS and USPS only
     const filteredRates = shipment.rates;
-    
-    // .filter(rate => 
+
+    // .filter(rate =>
     //   rate.provider === 'UPS' || rate.provider === 'USPS'
     // );
 
@@ -227,6 +227,12 @@ app.post('/api/placeOrder', async (req, res) => {
       subject: 'Shipping Label for Order #' + transactionId,
       text: 'Please find the attached shipping label for your order: ' + transaction.labelUrl,
     };
+    const mailOptionsCustomer = {
+      from: process.env.GMAIL_USER,
+      to: email,  // Recipient email
+      subject: 'Confirmation: Order for "Nandi and the Castle in the Sea" has been placed',
+      text: 'Thank you for your order! Your order has been received, and we will ship it soon. Once it is shipped, you will receive another email with a tracking number. If you have any questions, feel free to reply to this email.'
+    };
 
     // Convert the email sending function to a Promise-based approach
     const sendEmail = (mailOptions) => {
@@ -240,7 +246,6 @@ app.post('/api/placeOrder', async (req, res) => {
         });
       });
     };
-
     try {
       await sendEmail(mailOptions);
       console.log('✅ Email sent successfully');
@@ -248,7 +253,13 @@ app.post('/api/placeOrder', async (req, res) => {
       console.error('❌ Error sending email:', error);
       return res.status(500).json({ error: 'An error occurred while sending the email.' });
     }
-
+    try {
+      await sendEmail(mailOptionsCustomer);
+      console.log('✅ Email sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending email:', error);
+      return res.status(500).json({ error: 'An error occurred while sending the email to the customer.' });
+    }
     // Step 7: Respond with shipment ID and success message
     res.status(200).json({
       message: 'Order placed successfully! Label created, emailed, and order saved.',
