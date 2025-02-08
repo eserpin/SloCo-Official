@@ -103,7 +103,7 @@ export const Checkout = () => {
           {
             amount: {
               currency_code: currency,
-              value: "0.01" //total.toFixed(2),
+              value: total.toFixed(2),
             },
             shipping: {
               address: {
