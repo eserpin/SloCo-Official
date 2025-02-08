@@ -136,7 +136,21 @@ app.post('/api/placeOrder', async (req, res) => {
         massUnit: "lb",  // Weight unit in lbs
         distanceUnit: "in"  // Dimension unit in inches
       }],
-      customsDeclaration: customsDeclaration.objectId
+      customsDeclaration: customsDeclaration.objectId,
+      addressImporter: {
+        name: "Anil Serpin",
+        company: "Slow Comics Publishing",
+        street1: "Saddlewood Dr",
+        street3: "",
+        streetNo: "108",
+        city: "Hillsdale",
+        state: "NJ",
+        zip: "07642",
+        country: "US",
+        phone: "16468513908",
+        email: "slow.comics.publishing@gmail.com",
+        isResidential: true,
+      },
     });
 
     // Check if shipment creation was successful
