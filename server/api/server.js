@@ -231,7 +231,7 @@ app.post('/api/placeOrder', async (req, res) => {
       from: process.env.GMAIL_USER,
       to: email,  // Recipient email
       subject: 'Confirmation: Order for "Nandi and the Castle in the Sea" has been placed',
-      text: 'Thank you for your order! Your order has been received, and we will ship it soon. Once it is shipped, you will receive another email with a tracking number. If you have any questions, feel free to reply to this email.'
+      text: 'Thank you for your order! Your order has been received, and we will ship it as soon as the books are in hand. Once it is shipped, you will receive another email with a tracking number. If you have any questions, feel free to reply to this email.'
     };
 
     // Convert the email sending function to a Promise-based approach
