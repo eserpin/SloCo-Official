@@ -44,20 +44,52 @@ app.post('/api/shippingCalculation', async (req, res) => {
     return res.status(400).json({ error: 'AddressTo is required' });
   }
 
-  try {
-    // Step 1: Create shipment
-    const shipment = await shippo.shipments.create({
-      addressFrom,  // Sender's address
-      addressTo,    // Receiver's address
-      parcels: [{
-        weight: (2.5*quantity).toString(),  // Total weight in lbs
-        length: "9.25",  // Adjust based on parcel details
-        width: "6.25",
-        height: (1 * quantity).toString(),  // Height = 1 * quantity (dynamic based on quantity)
-        massUnit: "lb",  // Weight unit in lbs
-        distanceUnit: "in"  // Dimension unit in inches
-      }],
-    });
+  const customsItem = {
+    description: "Graphic Novel",
+    quantity: quantity,
+    netWeight: (2.5*quantity).toFixed(2), // Dynamically calculated
+    massUnit: "lb",
+    valueAmount: (20 * quantity).toFixed(2), // Dynamically calculated
+    valueCurrency: "USD",
+    originCountry: "US",
+    }
+    try {
+      const customsDeclaration = await shippo.customsDeclarations.create({
+        contentsType: "MERCHANDISE",
+        contentsExplanation: "Graphic Novel",
+        nonDeliveryOption: "RETURN",
+        certify: true,
+        certifySigner: "Anil Serpin",
+        items: [customsItem],
+      });
+      console.log("customs declaration: " + JSON.stringify(customsDeclaration));
+      const shipment = await shippo.shipments.create({
+        addressFrom,  // Sender's address
+        addressTo: address,    // Receiver's address
+        parcels: [{
+          weight: (2.5 * quantity).toString(),  // Total weight in lbs
+          length: "9.25",  // Adjust based on parcel details
+          width: "6.25",
+          height: (1 * quantity).toString(),  // Height = 1 * quantity (dynamic based on quantity)
+          massUnit: "lb",  // Weight unit in lbs
+          distanceUnit: "in"  // Dimension unit in inches
+        }],
+        customsDeclaration: customsDeclaration.objectId,
+        addressImporter: {
+          name: "Anil Serpin",
+          company: "Slow Comics Publishing",
+          street1: "Saddlewood Dr",
+          street3: "",
+          streetNo: "108",
+          city: "Hillsdale",
+          state: "NJ",
+          zip: "07642",
+          country: "US",
+          phone: "16468513908",
+          email: "slow.comics.publishing@gmail.com",
+          isResidential: true,
+        },
+      });
     
     // Check if shipment creation was successful
     if (shipment.error) {
