@@ -136,8 +136,7 @@ app.post('/api/placeOrder', async (req, res) => {
         massUnit: "lb",  // Weight unit in lbs
         distanceUnit: "in"  // Dimension unit in inches
       }],
-      customs_declaration: customsDeclaration.objectId,
-      items: [customsItem]
+      customsDeclaration: customsDeclaration.objectId
     });
 
     // Check if shipment creation was successful
