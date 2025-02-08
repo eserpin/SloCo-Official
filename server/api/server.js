@@ -65,7 +65,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
       console.log("customs declaration: " + JSON.stringify(customsDeclaration));
       const shipment = await shippo.shipments.create({
         addressFrom,  // Sender's address
-        addressTo: address,    // Receiver's address
+        addressTo: addressTo,    // Receiver's address
         parcels: [{
           weight: (2.5 * quantity).toString(),  // Total weight in lbs
           length: "9.25",  // Adjust based on parcel details
