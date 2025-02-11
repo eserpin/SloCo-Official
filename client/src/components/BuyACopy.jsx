@@ -27,7 +27,7 @@ export const BuyACopy = () => {
 
         {/* Right: Quantity and Price */}
         <div className="details-container">
-          <h1 className="title">Buy a Copy</h1>
+          <h1 className="title">Buy a Copy Now!</h1>
           {/* <h1 className="title">Preorder</h1> */}
           {/* <p className="description">
             Coming in April 2025!
