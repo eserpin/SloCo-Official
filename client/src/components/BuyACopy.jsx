@@ -27,13 +27,12 @@ export const BuyACopy = () => {
 
         {/* Right: Quantity and Price */}
         <div className="details-container">
-          <h1 className="title">Buy A Copy</h1>
-          {/* <h1 className="title">Preorder</h1> */}
-          {/* <p className="description">
-            Coming in April 2025!
-          </p> */}
+          <h1 className="title">Preorder</h1>
           <p className="description">
-          {/* 25% Discount with Preorder */}
+            Coming in April 2025!
+          </p>
+          <p className="description">
+          25% Discount with Preorder
           </p>
 
           <div className="quantity-container">
