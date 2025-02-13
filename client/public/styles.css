@@ -41,9 +41,6 @@
     scrollbar-width: none; /* Hides scrollbar in Firefox */
     -ms-overflow-style: none; /* Hides scrollbar in IE/Edge */
   }
-  .nav-bar::-webkit-scrollbar {
-    display: none;
-  }
   .nav-bar a {
     flex-shrink: 0; /* Prevents items from shrinking */
   }
@@ -55,7 +52,7 @@
   .navLinks {
     list-style: none;
     display: flex;
-    gap: 20px;
+    gap: 1rem;
     text-align: center;
   }
   
@@ -72,7 +69,22 @@
   .navLinks a:hover {
     color: var(--de-york); /* Hover color */
   }
-  
+  @media (max-width: 768px) {
+    #nav-logo {
+      width: 80px; /* Reduce size on mobile */
+  }
+    .navbar {
+        padding: 0.5rem; /* Reduce padding to save space */
+    }
+    
+    .navbar-links {
+        gap: 0.5rem; /* Reduce spacing between links */
+    }
+
+    .navbar a {
+        font-size: 0.875rem; /* Makes text smaller */
+    }
+}
   /* Main Content */
   #body {
     background-color: var(--de-york);
