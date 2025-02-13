@@ -73,6 +73,7 @@
   @media (max-width: 768px) {
     #nav-logo {
       width: 80px; /* Reduce size on mobile */
+      filter: invert(1);
   }
     .navbar {
         padding: 0.5rem; /* Reduce padding to save space */
