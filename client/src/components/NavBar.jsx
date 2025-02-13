@@ -1,5 +1,5 @@
 import React from "react";
-import logo from "../images/Logo.jpeg";
+import logo from "../images/Logo.png";
 import {Link} from 'react-router-dom';
 import { HashLink} from "react-router-hash-link";
 const NavBar = () => {

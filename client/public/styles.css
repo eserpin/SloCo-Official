@@ -46,6 +46,7 @@
   }
   #nav-logo {
     max-width: 100px;
+    background: transparent;
     height: auto; /* Maintains aspect ratio */
   }
   
