@@ -273,7 +273,21 @@ app.post('/api/shippingCalculation', async (req, res) => {
 //     }
 //   }
 // });
+app.get("/images/:filename", async (req, res) => {
+  try {
+      const { filename } = req.params;
+      const blob = await get(`images/${filename}`); // Path in Vercel Blob
 
+      if (!blob) {
+          return res.status(404).json({ error: "Image not found" });
+      }
+
+      res.redirect(blob.url); // Redirects to the image URL in Vercel Blob
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to fetch image" });
+  }
+});
 app.get('/', (req, res) => {
   res.send(`Server is running on port ${PORT}`);
 });
