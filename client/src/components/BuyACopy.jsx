@@ -2,9 +2,13 @@ import React, { useState } from "react";
 import { Link } from 'react-router-dom';
 import NavBar from "./NavBar";
 import Footer from "./Footer";
-import cover from "../images/Cover.jpg";
+import front from "../images/front.jpeg";
+import back from "../images/back.jpeg";
+
+const images = [front, back];
 export const BuyACopy = () => {
   const [quantity, setQuantity] = useState(1);
+  const [currentImage, setCurrentImage] = useState(0)
   const pricePerCopy = 20; // Adjust this as needed
   const totalPrice = pricePerCopy * quantity;
 
@@ -15,20 +19,41 @@ export const BuyACopy = () => {
   return (
     <div>
       <NavBar/>
-      <div className="buy-container">
+      <div className="buy-container ">
         {/* Left: Image */}
-        <div className="image-container">
-          <img
-            src={cover}
-            alt="Graphic Novel Cover"
-            className="image"
-          />
+        <div  className="image-gallery">
+          <div className="thumbnail-container">
+            <img 
+              src={images[0]} 
+              width={100} 
+              height={100} 
+              alt="front cover" 
+              className="thumbnail rounded-md cursor-pointer"
+              onClick={(e) => {
+                setCurrentImage(0);
+              }}
+            />
+            <img 
+              src={images[1]} 
+              width={100} 
+              height={100} 
+              alt="back cover" 
+              className="thumbnail rounded-md cursor-pointer"
+              onClick={(e) => {
+                setCurrentImage(1);
+              }}
+            />
+          </div>
+          <div current-image-container>
+            <img src={images[currentImage]} width={480} height={480} alt="product image" className="current-image"/>
+          </div>
         </div>
 
         {/* Right: Quantity and Price */}
         <div className="details-container">
-          <h1 className="title">Buy a Copy Now!</h1>
-          {/* <h1 className="title">Preorder</h1> */}
+          <h1 className="title">Slow Comics Presents: Nandi and the Castle in the Sea</h1>
+          <h2 className="title">Buy a Copy Now!</h2>
+          {/* <h2 className="title">Preorder</h2> */}
           {/* <p className="description">
             Coming in April 2025!
           </p>

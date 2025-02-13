@@ -137,6 +137,64 @@
     height: auto;
     text-align: center; /* Ensures text alignment is consistent */
   }
+  .image-gallery { 
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .image-gallery {
+        max-height: 60vh; /* Reduce height on mobile */
+    }
+
+    .current-image-container {
+        max-width: 90%; /* Prevents image from taking up full width */
+    }
+
+    .current-image {
+        max-height: 50vh; /* Ensures image does not take up too much space */
+    }
+
+    .thumbnail-container {
+        flex-direction: row; /* Display thumbnails in a row instead */
+        justify-content: center; /* Center the thumbnails */
+        gap: 5px;
+    }
+
+    .thumbnail {
+        width: 60px; /* Reduce thumbnail size for mobile */
+    }
+}
+
+
+.thumbnail-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Proper spacing between thumbnails */
+}
+
+.thumbnail {
+    width: 80px; /* Adjust thumbnail size */
+    height: auto; /* Maintain aspect ratio */
+    cursor: pointer;
+}
+
+.current-image-container {
+    flex: 1; /* Allows image container to resize naturally */
+    display: flex;
+    justify-content: center;
+}
+
+.current-image {
+    max-width: 100%; /* Ensures image scales responsively */
+    height: auto; /* Maintains aspect ratio */
+    object-fit: contain; /* Prevents stretching */
+}
+
   
   @media (min-width: 768px) {
     .buy-container {
@@ -145,15 +203,16 @@
     }
   }
   
-  .image-container {
-    width: auto;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Ensure it’s centered horizontally */
-    flex-shrink: 0;
-    margin: 0; /* Reset margin */
-  }
+  @media (max-width: 768px) { /* Apply only on mobile */
+    .thumbnail-container {
+        max-width: 100px; /* Prevents excessive growth */
+    }
+
+    .thumbnail-container img {
+        width: 80px; /* Adjust thumbnail size */
+        height: 80px; /* Maintain aspect ratio */
+    }
+}
   
   .image {
     object-fit: contain;
@@ -194,14 +253,6 @@
       padding: 1rem;
     }
   
-    .image-container {
-      justify-content: center; /* Center image */
-      margin: 0 auto;
-    }
-  
-    .image-container img {
-      height: 30vh; /* Adjust image size for smaller screens */
-    }
   
     .details-container {
       font-size: 1rem; /* Scale down text size */

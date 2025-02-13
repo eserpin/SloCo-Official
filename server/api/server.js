@@ -23,16 +23,16 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Define the addressFrom (Sender's address)
 const addressFrom = {
-  name: 'Slow Comics Publishing',
-  street1: '108 Saddlewood Dr.',
+  name: 'Slow Comics',
+  street1: '65 Honeck Street',
   street3: "",
-  city: 'Hillsdale',
+  city: 'Englewood',
   state: 'NJ',
-  zip: '07642',
+  zip: '07631',
   country: 'US',
   phone: '+1 646 851 3908',
   email: 'slow.comics.publishing@gmail.com',
-  isResidential: true,
+  isResidential: false,
 };
 
 // Route to calculate shipping rates
