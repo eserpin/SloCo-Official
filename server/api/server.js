@@ -273,7 +273,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
 //     }
 //   }
 // });
-app.get("/images/:filename", async (req, res) => {
+app.get("/api/images/:filename", async (req, res) => {
   try {
       const { filename } = req.params;
       const blob = await get(`images/${filename}`); // Path in Vercel Blob
