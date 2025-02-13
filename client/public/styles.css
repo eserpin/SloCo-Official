@@ -184,12 +184,15 @@
     display: flex;
     flex-direction: column;
     gap: 10px; /* Proper spacing between thumbnails */
+    height: auto; /* Maintains aspect ratio */
+    object-fit: contain; /* Ensures the whole image fits inside */
 }
 
 .thumbnail {
-    width: 80px; /* Adjust thumbnail size */
+    width: 100px; /* Keeps a fixed width */
     height: auto; /* Maintain aspect ratio */
     cursor: pointer;
+    object-fit: contain; /* Ensures the whole image fits inside */
 }
 
 .current-image-container {

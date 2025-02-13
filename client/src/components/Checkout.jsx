@@ -218,7 +218,7 @@ export const Checkout = () => {
           )}
 
           {/* PayPal Button */}
-          {shippingPrice !== null && (
+          {/* {shippingPrice !== null && (
             <PayPalButtons
             style={{
               layout: "vertical",
@@ -227,7 +227,7 @@ export const Checkout = () => {
             onApprove={onApprove}
             fundingSource="paypal"
           />
-          )}
+          )} */}
         </div>
         <Footer />
       </div>
