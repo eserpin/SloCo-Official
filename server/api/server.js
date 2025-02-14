@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
 require('dotenv').config({ path: '../.env' });
-import {get} from "@vercel/blob";
+import {list} from "@vercel/blob";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -276,17 +276,22 @@ app.post('/api/shippingCalculation', async (req, res) => {
 // });
 app.get("/api/images/:filename", async (req, res) => {
   try {
-      const { filename } = req.params;
-      const blob = await get(`images/${filename}`); // Path in Vercel Blob
+    const { filename } = req.params;
+    
+    // Fetch all blobs
+    const blobs = await list();
+    console.log(blobs);
+    // Find the blob with the requested filename
+    const blob = blobs.blobs.find(b => b.pathname.endsWith(filename));
 
-      if (!blob) {
-          return res.status(404).json({ error: "Image not found" });
-      }
+    if (!blob) {
+      return res.status(404).json({ error: "Image not found" });
+    }
 
-      res.redirect(blob.url); // Redirects to the image URL in Vercel Blob
+    res.redirect(blob.url); // Redirect client to the image URL
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Failed to fetch image" });
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch image" });
   }
 });
 app.get('/', (req, res) => {
