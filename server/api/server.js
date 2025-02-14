@@ -308,7 +308,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Request OTP
-app.post("/request-otp", async (req, res) => {
+app.post("/api/request-otp", async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -339,7 +339,7 @@ app.post("/request-otp", async (req, res) => {
 });
 
 // Verify OTP
-app.post("/verify-otp", (req, res) => {
+app.post("/api/verify-otp", (req, res) => {
   const { email, otp } = req.body;
   const storedOtp = otpStore[email];
 
