@@ -11,7 +11,7 @@ export const ComicReader = () => {
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}api/images/${page}.jpg`);
+        const response = await fetch(`https://slo-co-official.vercel.app/api/images/${page}.jpg`);
         if (!response.ok) {
           throw new Error("Failed to fetch image");
         }
@@ -26,13 +26,13 @@ export const ComicReader = () => {
     };
 
     fetchImage();
-  }, [currentPage]);
+  }, [page]);
   const nextImage = () => {
-    setCurrentPage((prevPage) => (prevPage + 1));
+    setPage((prevPage) => (prevPage + 1));
   };
 
   const prevImage = () => {
-    setCurrentPage((prevPage) => (prevPage - 1));
+    setPage((prevPage) => (prevPage - 1));
   };
 
   if (loading) return <p>Loading image...</p>;
@@ -48,7 +48,7 @@ export const ComicReader = () => {
                 <button onClick={prevImage} style={{ marginRight: '20px' }}>
                 <FaArrowLeft size={30} />
                 </button>
-                <span>Page {currentPage + 1}</span>
+                <span>Page {page}</span>
                 <button onClick={nextImage} style={{ marginLeft: '20px' }}>
                 <FaArrowRight size={30} />
                 </button>

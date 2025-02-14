@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
 require('dotenv').config({ path: '../.env' });
+import {get} from "@vercel/blob";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
