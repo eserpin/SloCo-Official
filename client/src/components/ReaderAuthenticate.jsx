@@ -69,9 +69,12 @@ export const ReaderAuthenticate = () => {
   };
 
   return (
-    <div className="email-verification">
+    <div className="reader-auth">
         <NavBar />
       <h1>Email Verification</h1>
+      <p className="auth-description">
+        If you've bought a copy online, you're in our database! Enter your email to receive a one-time password to access the digital copy! 
+      </p>
       {step === 1 && (
         <form onSubmit={handleEmailSubmit}>
           <label htmlFor="email">Enter your email:</label>
