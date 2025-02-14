@@ -282,7 +282,7 @@ app.get("/api/images/:filename", async (req, res) => {
     const blobs = await list();
     console.log(blobs);
     // Find the blob with the requested filename
-    const blob = blobs.blobs.find(b => b.pathname.endsWith(filename));
+    const blob = blobs.blobs.find(b => b.pathname == filename);
 
     if (!blob) {
       return res.status(404).json({ error: "Image not found" });
@@ -293,6 +293,62 @@ app.get("/api/images/:filename", async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch image" });
   }
+});
+
+
+const otpStore = {};
+
+// Nodemailer setup (Replace with your email credentials)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASS,
+  },
+});
+
+// Request OTP
+app.post("/request-otp", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Check if email exists in orders table
+    const result = await pool.query('SELECT * FROM orders WHERE email = $1', [email]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: "Email not found in database" });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    otpStore[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 }; // Expires in 5 mins
+
+    // Send OTP email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your Slow Comics One-Time-Password",
+      text: `Your One-Time-Password is: ${otp}. It expires in 5 minutes.`,
+    });
+
+    res.json({ message: "OTP sent to email" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred" });
+  }
+});
+
+// Verify OTP
+app.post("/verify-otp", (req, res) => {
+  const { email, otp } = req.body;
+  const storedOtp = otpStore[email];
+
+  if (!storedOtp || storedOtp.otp !== otp || Date.now() > storedOtp.expiresAt) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+  }
+
+  delete otpStore[email]; // Remove OTP after verification
+  res.json({ message: "OTP verified, access granted" });
 });
 app.get('/', (req, res) => {
   res.send(`Server is running on port ${PORT}`);

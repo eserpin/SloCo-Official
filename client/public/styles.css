@@ -422,6 +422,43 @@
   .shipping-details {
     margin-top: 20px;
   }
+  /*Comic Reader */
+
+
+  .comic-reader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh; /* Ensures full-page centering */
+    text-align: center;
+  }
+  
+  .comic-reader-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .comic-reader-image {
+    height: 70vh; /* 70% of the viewport height */
+    max-width: 90vw; /* Ensures it doesn’t overflow */
+    object-fit: contain; /* Maintains aspect ratio */
+  }
+  
+  .comic-reader-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+    gap: 10px; /* Space between buttons */
+  }
+  
+  .comic-reader-navigation button {
+    cursor: pointer;
+    padding: 5px;
+  }
+  
   
   /* Footer */
   footer {
