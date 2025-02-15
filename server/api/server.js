@@ -284,6 +284,21 @@ app.get('/api/images/:chapter/:page', async(req, res) => {
     // Find the blob with the requested filename
     const blob = blobs.blobs.find(b => b.pathname == (chapter + "/" + page));
 
+    // can rework this so that it sends all images from requested chapter, and then front-end stores them in an object or array so they are not constantly making api calls
+//     try {
+//       const { chapter } = req.query;
+//       if (!chapter) return res.status(400).json({ error: 'Chapter is required' });
+
+//       // Fetch all blobs that belong to the given chapter
+//       const { blobs } = await list({ prefix: `${chapter}/` });
+
+//       // Return an array of blob URLs
+//       res.status(200).json(blobs.map(blob => blob.url));
+//   } catch (error) {
+//       res.status(500).json({ error: error.message });
+//   }
+// }
+
     if (!blob) {
       return res.status(404).json({ error: "Image not found" });
     }
