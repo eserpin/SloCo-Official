@@ -274,15 +274,15 @@ app.post('/api/shippingCalculation', async (req, res) => {
 //     }
 //   }
 // });
-app.get("/api/images/:filename", async (req, res) => {
+app.get('/api/images/:chapter/:page', async(req, res) => {
   try {
-    const { filename } = req.params;
+    const { chapter, page } = req.params;
     
     // Fetch all blobs
     const blobs = await list();
     console.log(blobs);
     // Find the blob with the requested filename
-    const blob = blobs.blobs.find(b => b.pathname == filename);
+    const blob = blobs.blobs.find(b => b.pathname == (chapter + "/" + page));
 
     if (!blob) {
       return res.status(404).json({ error: "Image not found" });

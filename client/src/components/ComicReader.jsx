@@ -10,6 +10,7 @@ export const ComicReader = () => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [authenticated, setAuthenticated] = useState(false);
+  const [chapter, setChapter] = useState(1);
   const history = useHistory();
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem("authenticated");
@@ -25,7 +26,7 @@ export const ComicReader = () => {
 
       try {
         const response = await fetch(
-          `https://slo-co-official.vercel.app/api/images/${page}.jpg`
+          `https://slo-co-official.vercel.app/api/images/${chapter}/${page}.jpg`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch image");
