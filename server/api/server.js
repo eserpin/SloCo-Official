@@ -5,7 +5,8 @@ const Shippo = require('shippo').Shippo;
 const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
-import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import {getSignedUrl} from "aws-sdk/s3-request-presigner"
 require('dotenv').config({ path: '../.env' });
 import {list} from "@vercel/blob";
 
@@ -287,32 +288,45 @@ const s3 = new S3Client({
 
 app.get('/api/images/:chapter', async (req, res) => {
   try {
-    const { chapter } = req.params;  // Use req.params to get the chapter from the URL
-    console.log("prefix: " + chapter)
+    const { chapter } = req.params;
     if (!chapter) {
       return res.status(400).json({ error: "Chapter number is required" });
     }
 
-    // Fetch all blobs for the given chapter (with the 'prefix' option to get objects starting with the chapter name)
+    // List objects in the chapter folder
     const params = {
-      Bucket: 'nandi',  // Your bucket name
-      Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
+      Bucket: 'nandi',
+      Prefix: `${chapter}/`,
     };
 
     const data = await s3.send(new ListObjectsV2Command(params));
 
-    // Map the blob URLs and sort them by page number
-    const imageUrls = data.Contents.map((file) => {
-      console.log("file: " + console.log(JSON.stringify(file)))
-      return `https://${file.Bucket}.r2.cloudflarestorage.com/${file.Key}`;
-    }).sort((a, b) => {
-      // Sort by numerical page number (assuming the images are named like '1.jpg', '2.jpg', etc.)
-      const numA = parseInt(a.split('/').pop().split('.')[0], 10);
-      const numB = parseInt(b.split('/').pop().split('.')[0], 10);
+    if (!data.Contents) {
+      return res.status(404).json({ error: "No images found for this chapter" });
+    }
+
+    // Generate signed URLs for each file
+    const signedImageUrls = await Promise.all(
+      data.Contents.map(async (file) => {
+        const signedUrl = await getSignedUrl(
+          s3,
+          new GetObjectCommand({ Bucket: 'nandi', Key: file.Key }),
+          { expiresIn: 3600 } // URL expires in 1 hour
+        );
+        return { url: signedUrl, key: file.Key };
+      })
+    );
+    console.log("signed URLs: " + JSON.stringify(signedImageUrls));
+
+    // Sort by numerical page number (assuming file names are '1.jpg', '2.jpg', etc.)
+    signedImageUrls.sort((a, b) => {
+      const numA = parseInt(a.key.split('/').pop().split('.')[0], 10);
+      const numB = parseInt(b.key.split('/').pop().split('.')[0], 10);
       return numA - numB;
     });
-    console.log("image urls: " + imageUrls);
-    res.status(200).json({ images: imageUrls });
+
+    res.status(200).json({ images: signedImageUrls.map(obj => obj.url) });
+
   } catch (error) {
     console.error("Error fetching images:", error);
     res.status(500).json({ error: "Failed to retrieve images" });
