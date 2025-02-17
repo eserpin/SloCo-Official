@@ -288,7 +288,7 @@ const s3 = new S3Client({
 app.get('/api/images/:chapter', async (req, res) => {
   try {
     const { chapter } = req.params;  // Use req.params to get the chapter from the URL
-    
+    console.log("prefix: " + chapter)
     if (!chapter) {
       return res.status(400).json({ error: "Chapter number is required" });
     }
@@ -296,13 +296,14 @@ app.get('/api/images/:chapter', async (req, res) => {
     // Fetch all blobs for the given chapter (with the 'prefix' option to get objects starting with the chapter name)
     const params = {
       Bucket: 'nandi',  // Your bucket name
-      Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
+      // Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
     };
 
     const data = await s3.send(new ListObjectsV2Command(params));
 
     // Map the blob URLs and sort them by page number
     const imageUrls = data.Contents.map((file) => {
+      console.log(`Object key: ${file.Key}`);
       return `https://${file.Bucket}.r2.cloudflarestorage.com/${file.Key}`;
     }).sort((a, b) => {
       // Sort by numerical page number (assuming the images are named like '1.jpg', '2.jpg', etc.)
