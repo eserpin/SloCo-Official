@@ -58,8 +58,23 @@ export const ComicReader = () => {
     }
   }, [page, imageUrls]); // This runs when either page or imageUrls changes
 
-  const nextImage = () => setPage((prevPage) => Math.min(prevPage + 1, imageUrls.length));
-  const prevImage = () => setPage((prevPage) => Math.max(prevPage - 1, 1));
+  const nextImage = () => {
+    if (page < imageUrls.length) {
+      setPage((prevPage) => prevPage + 1);
+    } else {
+      setChapter((prevChapter) => prevChapter + 1); // Move to next chapter
+    }
+  };
+  
+  const prevImage = () => {
+    if (page > 1) {
+      setPage((prevPage) => prevPage - 1);
+    } else if (chapter > 1) {
+      setChapter((prevChapter) => prevChapter - 1); // Move to previous chapter
+    }
+  };
+  const isLastPageOfLastChapter = chapter === 14 && page === imageUrls.length;
+  const isFirstPageOfFirstChapter = chapter === 1 && page === 1;
 
   const handleChapterChange = (event) => {
     setChapter(Number(event.target.value)); // Update the chapter number
@@ -113,13 +128,19 @@ export const ComicReader = () => {
 
         {/* Navigation buttons */}
         <div className="comic-reader-navigation">
-          <button onClick={prevImage} disabled={page <= 1} className="">
+          {/* Left Arrow: Only enable if not on Chapter 1, Page 1 */}
+          <button onClick={prevImage} disabled={isFirstPageOfFirstChapter} className="">
             <FaArrowLeft size={30} />
           </button>
+
           <span>Page {page}</span>
-          <button onClick={nextImage} disabled={page >= imageUrls.length} className="">
-            <FaArrowRight size={30} />
-          </button>
+
+          {/* Right Arrow: Hide if on the last page of the last chapter */}
+          {!isLastPageOfLastChapter && (
+            <button onClick={nextImage} className="">
+              <FaArrowRight size={30} />
+            </button>
+          )}
         </div>
       </div>
       <Footer />
