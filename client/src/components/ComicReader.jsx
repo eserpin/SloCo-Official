@@ -5,13 +5,15 @@ import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { useHistory } from "react-router-dom";
 
 export const ComicReader = () => {
-  const [imageSrc, setImageSrc] = useState(null);
+  const [imageUrls, setImageUrls] = useState([]); // Array to store all image URLs
+  const [imageSrc, setImageSrc] = useState(null); // Current image URL
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [authenticated, setAuthenticated] = useState(false);
   const [chapter, setChapter] = useState(1);
   const history = useHistory();
+
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem("authenticated");
     if (isAuthenticated) {
@@ -20,20 +22,25 @@ export const ComicReader = () => {
       setAuthenticated(false);
       history.push("/readerAuth");
     }
-    const fetchImage = async () => {
+  }, [history]);
+
+  // Fetch all image URLs for the current chapter
+  useEffect(() => {
+    const fetchImages = async () => {
       setLoading(true); // Set loading to true before fetching
       setError(null);   // Reset error state
 
       try {
         const response = await fetch(
-          `https://slo-co-official.vercel.app/api/images/${chapter}/${page}.jpg`
+          `https://slo-co-official.vercel.app/api/images/${chapter}`
         );
         if (!response.ok) {
-          throw new Error("Failed to fetch image");
+          throw new Error("Failed to fetch images");
         }
-        const imageBlob = await response.blob();
-        const imageUrl = URL.createObjectURL(imageBlob);
-        setImageSrc(imageUrl);
+        const data = await response.json();
+        const urls = data.images || []; // Assuming the response has an array of image URLs
+        setImageUrls(urls); // Store the URLs in the state
+        setPage(1); // Reset page to 1 when the chapter changes
       } catch (err) {
         setError(err.message);
       } finally {
@@ -41,22 +48,58 @@ export const ComicReader = () => {
       }
     };
 
-    fetchImage();
-  }, [page]);
+    fetchImages();
+  }, [chapter]); // This runs whenever the chapter changes
 
-  const nextImage = () => setPage((prevPage) => prevPage + 1);
+  // Set the image URL when the page changes
+  useEffect(() => {
+    if (imageUrls.length > 0) {
+      setImageSrc(imageUrls[page - 1]); // Set the current image based on the page number
+    }
+  }, [page, imageUrls]); // This runs when either page or imageUrls changes
+
+  const nextImage = () => setPage((prevPage) => Math.min(prevPage + 1, imageUrls.length));
   const prevImage = () => setPage((prevPage) => Math.max(prevPage - 1, 1));
+
+  const handleChapterChange = (event) => {
+    setChapter(Number(event.target.value)); // Update the chapter number
+  };
+
+  const handlePageChange = (event) => {
+    setPage(Number(event.target.value)); // Update the page number
+  };
+
   if (!authenticated) {
     return <p>Loading...</p>; // Or a loading spinner
   }
+
   return (
     <div>
       <NavBar />
       <div className="comic-reader">
         <h2 className="comic-reader-title">Nandi and the Castle in the Sea</h2>
+        <div className="dropdowns">
+          {/* Chapter Dropdown */}
+          <select onChange={handleChapterChange} value={chapter}>
+            {[...Array(14).keys()].map((i) => (
+              <option key={i} value={i + 1}>
+                Chapter {i + 1}
+              </option>
+            ))}
+          </select>
+
+          {/* Page Dropdown */}
+          <select onChange={handlePageChange} value={page} disabled={loading}>
+            {[...Array(imageUrls.length).keys()].map((i) => (
+              <option key={i} value={i + 1}>
+                Page {i + 1}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Show loading indicator */}
-        {loading && <p className="">Loading image...</p>}
+        {loading && <p className="">Loading images...</p>}
         {error && <p className="">Error: {error}</p>}
 
         {/* Display image when loaded */}
@@ -70,11 +113,11 @@ export const ComicReader = () => {
 
         {/* Navigation buttons */}
         <div className="comic-reader-navigation">
-          <button onClick={prevImage} className="">
+          <button onClick={prevImage} disabled={page <= 1} className="">
             <FaArrowLeft size={30} />
           </button>
           <span>Page {page}</span>
-          <button onClick={nextImage} className="">
+          <button onClick={nextImage} disabled={page >= imageUrls.length} className="">
             <FaArrowRight size={30} />
           </button>
         </div>

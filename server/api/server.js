@@ -5,6 +5,7 @@ const Shippo = require('shippo').Shippo;
 const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
+const AWS = require('@aws-sdk/client-s3');
 require('dotenv').config({ path: '../.env' });
 import {list} from "@vercel/blob";
 
@@ -274,39 +275,46 @@ app.post('/api/shippingCalculation', async (req, res) => {
 //     }
 //   }
 // });
-app.get('/api/images/:chapter/:page', async(req, res) => {
+// Configure Cloudflare R2 client
+const S3 = new S3Client({
+  region: "auto",
+  endpoint: `https://e13d4858b9bcb13cee630426d21ba396.r2.cloudflarestorage.com/nandi`,
+  credentials: {
+    accessKeyId: "d94f471450ffc187eeef087ad8239321",
+    secretAccessKey: "d94f471450ffc187eeef087ad8239321",
+  },
+});
+
+app.get('/api/images/:chapter', async (req, res) => {
   try {
-    const { chapter, page } = req.params;
+    const { chapter } = req.params;  // Use req.params to get the chapter from the URL
     
-    // Fetch all blobs
-    const blobs = await list();
-    console.log(blobs);
-    // Find the blob with the requested filename
-    const blob = blobs.blobs.find(b => b.pathname == (chapter + "/" + page));
-
-    // can rework this so that it sends all images from requested chapter, and then front-end stores them in an object or array so they are not constantly making api calls
-//     try {
-//       const { chapter } = req.query;
-//       if (!chapter) return res.status(400).json({ error: 'Chapter is required' });
-
-//       // Fetch all blobs that belong to the given chapter
-//       const { blobs } = await list({ prefix: `${chapter}/` });
-
-//       // Return an array of blob URLs
-//       res.status(200).json(blobs.map(blob => blob.url));
-//   } catch (error) {
-//       res.status(500).json({ error: error.message });
-//   }
-// }
-
-    if (!blob) {
-      return res.status(404).json({ error: "Image not found" });
+    if (!chapter) {
+      return res.status(400).json({ error: "Chapter number is required" });
     }
 
-    res.redirect(blob.url); // Redirect client to the image URL
+    // Fetch all blobs for the given chapter (with the 'prefix' option to get objects starting with the chapter name)
+    const params = {
+      Bucket: 'nandi',  // Your bucket name
+      Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
+    };
+
+    const result = await s3.listObjectsV2(params);
+
+    // Map the blob URLs and sort them by page number
+    const imageUrls = result.Contents.map((file) => {
+      return `https://${file.Bucket}.r2.cloudflarestorage.com/${file.Key}`;
+    }).sort((a, b) => {
+      // Sort by numerical page number (assuming the images are named like '1.jpg', '2.jpg', etc.)
+      const numA = parseInt(a.split('/').pop().split('.')[0], 10);
+      const numB = parseInt(b.split('/').pop().split('.')[0], 10);
+      return numA - numB;
+    });
+
+    res.status(200).json({ images: imageUrls });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch image" });
+    console.error("Error fetching images:", error);
+    res.status(500).json({ error: "Failed to retrieve images" });
   }
 });
 
@@ -336,7 +344,7 @@ app.post("/api/request-otp", async (req, res) => {
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    otpStore[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 }; // Expires in 5 mins
+    otpStore[otp] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 }; // Expires in 5 mins
 
     // Send OTP email
     await transporter.sendMail({
@@ -356,13 +364,13 @@ app.post("/api/request-otp", async (req, res) => {
 // Verify OTP
 app.post("/api/verify-otp", (req, res) => {
   const { email, otp } = req.body;
-  const storedOtp = otpStore[email];
+  const storedOtp = otpStore[otp];
 
   if (!storedOtp || storedOtp.otp !== otp || Date.now() > storedOtp.expiresAt) {
     return res.status(400).json({ message: "Invalid or expired OTP" });
   }
 
-  delete otpStore[email]; // Remove OTP after verification
+  delete otpStore[otp]; // Remove OTP after verification
   res.json({ message: "OTP verified, access granted" });
 });
 app.get('/', (req, res) => {
