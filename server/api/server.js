@@ -296,14 +296,13 @@ app.get('/api/images/:chapter', async (req, res) => {
     // Fetch all blobs for the given chapter (with the 'prefix' option to get objects starting with the chapter name)
     const params = {
       Bucket: 'nandi',  // Your bucket name
-      // Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
+      Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
     };
 
     const data = await s3.send(new ListObjectsV2Command(params));
 
     // Map the blob URLs and sort them by page number
     const imageUrls = data.Contents.map((file) => {
-      console.log(`Object key: ${file.Key}`);
       return `https://${file.Bucket}.r2.cloudflarestorage.com/${file.Key}`;
     }).sort((a, b) => {
       // Sort by numerical page number (assuming the images are named like '1.jpg', '2.jpg', etc.)
@@ -311,7 +310,7 @@ app.get('/api/images/:chapter', async (req, res) => {
       const numB = parseInt(b.split('/').pop().split('.')[0], 10);
       return numA - numB;
     });
-
+    console.log("image urls: " + imageUrls);
     res.status(200).json({ images: imageUrls });
   } catch (error) {
     console.error("Error fetching images:", error);
