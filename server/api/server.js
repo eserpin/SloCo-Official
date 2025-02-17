@@ -5,7 +5,7 @@ const Shippo = require('shippo').Shippo;
 const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
-const AWS = require('@aws-sdk/client-s3');
+import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 require('dotenv').config({ path: '../.env' });
 import {list} from "@vercel/blob";
 
@@ -276,7 +276,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
 //   }
 // });
 // Configure Cloudflare R2 client
-const s3 = new AWS.S3Client({
+const s3 = new S3Client({
   region: "auto",
   endpoint: process.env.CF_ENDPOINT,
   credentials: {
@@ -299,10 +299,10 @@ app.get('/api/images/:chapter', async (req, res) => {
       Prefix: `${chapter}/`,  // This will match all files starting with the chapter number
     };
 
-    const result = await s3.listObjectsV2(params);
+    const data = await s3.send(new ListObjectsV2Command(params));
 
     // Map the blob URLs and sort them by page number
-    const imageUrls = result.Contents.map((file) => {
+    const imageUrls = data.Contents.map((file) => {
       return `https://${file.Bucket}.r2.cloudflarestorage.com/${file.Key}`;
     }).sort((a, b) => {
       // Sort by numerical page number (assuming the images are named like '1.jpg', '2.jpg', etc.)
