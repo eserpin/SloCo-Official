@@ -303,7 +303,7 @@ app.get('/api/images/:chapter', async (req, res) => {
 
     // Map the blob URLs and sort them by page number
     const imageUrls = data.Contents.map((file) => {
-      console.log("file: " + file)
+      console.log("file: " + console.log(JSON.stringify(file)))
       return `https://${file.Bucket}.r2.cloudflarestorage.com/${file.Key}`;
     }).sort((a, b) => {
       // Sort by numerical page number (assuming the images are named like '1.jpg', '2.jpg', etc.)
