@@ -276,7 +276,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
 //   }
 // });
 // Configure Cloudflare R2 client
-const S3 = new S3Client({
+const s3 = new AWS.S3Client({
   region: "auto",
   endpoint: process.env.CF_ENDPOINT,
   credentials: {
