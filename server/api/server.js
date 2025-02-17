@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer');
 const {Pool} = require('pg');
 const path = require('path');
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
-import {getSignedUrl} from "aws-sdk/s3-request-presigner"
+import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 require('dotenv').config({ path: '../.env' });
 import {list} from "@vercel/blob";
 
