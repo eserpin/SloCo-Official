@@ -377,17 +377,30 @@ app.post("/api/request-otp", async (req, res) => {
 });
 
 // Verify OTP
-app.post("/api/verify-otp", (req, res) => {
+app.post("/api/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
-  const storedOtp = otpStore[otp];
 
-  if (!storedOtp || storedOtp.otp !== otp || Date.now() > storedOtp.expiresAt) {
-    return res.status(400).json({ message: "Invalid or expired OTP" });
+  try {
+    // Check if the OTP exists and is still valid
+    const result = await pool.query(
+      "SELECT * FROM otps WHERE email = $1 AND otp = $2 AND expires_at > NOW()",
+      [email, otp]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // OTP is valid, delete it after verification
+    await pool.query("DELETE FROM otps WHERE email = $1", [email]);
+
+    res.json({ message: "OTP verified, access granted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred" });
   }
-
-  delete otpStore[otp]; // Remove OTP after verification
-  res.json({ message: "OTP verified, access granted" });
 });
+
 app.get('/', (req, res) => {
   res.send(`Server is running on port ${PORT}`);
 });

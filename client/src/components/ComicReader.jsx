@@ -3,11 +3,14 @@ import NavBar from "./NavBar";
 import Footer from "./Footer";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { useHistory } from "react-router-dom";
+import loadingSloth from "../images/loading.png";
 
 export const ComicReader = () => {
   const [imageUrls, setImageUrls] = useState([]); // Array to store all image URLs
   const [imageSrc, setImageSrc] = useState(null); // Current image URL
   const [loading, setLoading] = useState(true);
+  const [loadingImage, setLoadingImage] = useState(false);
+
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [authenticated, setAuthenticated] = useState(false);
@@ -54,11 +57,14 @@ export const ComicReader = () => {
   // Set the image URL when the page changes
   useEffect(() => {
     if (imageUrls.length > 0) {
+      setImageSrc(loadingSloth);
       setImageSrc(imageUrls[page - 1]); // Set the current image based on the page number
     }
-  }, [page, imageUrls]); // This runs when either page or imageUrls changes
+  }, [page, imageUrls, imageSrc]);
+  ;
 
   const nextImage = () => {
+    setImageSrc(loadingSloth);
     if (page < imageUrls.length) {
       setPage((prevPage) => prevPage + 1);
     } else {
@@ -67,6 +73,7 @@ export const ComicReader = () => {
   };
   
   const prevImage = () => {
+    setImageSrc(loadingSloth);
     if (page > 1) {
       setPage((prevPage) => prevPage - 1);
     } else if (chapter > 1) {
@@ -81,6 +88,7 @@ export const ComicReader = () => {
   };
 
   const handlePageChange = (event) => {
+    setImageSrc(loadingSloth); //
     setPage(Number(event.target.value)); // Update the page number
   };
 
@@ -114,7 +122,7 @@ export const ComicReader = () => {
         </div>
 
         {/* Show loading indicator */}
-        {loading && <p className="">Loading images...</p>}
+        {loading && <img src={loadingSloth} className="comic-reader-image"/>}
         {error && <p className="">Error: {error}</p>}
 
         {/* Display image when loaded */}
