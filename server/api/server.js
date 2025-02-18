@@ -379,14 +379,14 @@ app.post("/api/request-otp", async (req, res) => {
 // Verify OTP
 app.post("/api/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
-
+  console.log("otp: " + otp);
   try {
     // Check if the OTP exists and is still valid
     const result = await pool.query(
       "SELECT * FROM otps WHERE email = $1 AND otp = $2 AND expires_at > NOW()",
       [email, otp]
     );
-
+    console.log(JSON.stringify(result));
     if (result.rows.length === 0) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
