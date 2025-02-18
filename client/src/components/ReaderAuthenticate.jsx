@@ -19,7 +19,7 @@ export const ReaderAuthenticate = () => {
     setMessage('');
 
     try {
-      const response = await fetch('https://slo-co-official.vercel.app/api/request-otp', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}api/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -47,7 +47,7 @@ export const ReaderAuthenticate = () => {
     setMessage('');
 
     try {
-      const response = await fetch('https://slo-co-official.vercel.app/api/verify-otp', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}api/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
