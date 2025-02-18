@@ -20,7 +20,7 @@ const NavBar = () => {
           </HashLink></li>
         <li><Link to="/buy-a-copy">Buy A Copy</Link></li>
         <li><a href="#contact">Contact Us</a></li>
-        {/* <li><Link to="/read" >Read Online</Link></li> */}
+        <li><Link to="/read" >Read Online</Link></li>
       </ul>
     </nav>
   );
