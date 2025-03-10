@@ -23,21 +23,21 @@ export const BuyACopy = () => {
         {/* Left: Image */}
         <div  className="image-gallery">
           <div className="thumbnail-container">
-            <img 
-              src={images[0]} 
-              width={100} 
-              height={100} 
-              alt="front cover" 
+            <img
+              src={images[0]}
+              width={100}
+              height={100}
+              alt="front cover"
               className="thumbnail rounded-md cursor-pointer"
               onClick={(e) => {
                 setCurrentImage(0);
               }}
             />
-            <img 
-              src={images[1]} 
-              width={100} 
-              height={100} 
-              alt="back cover" 
+            <img
+              src={images[1]}
+              width={100}
+              height={100}
+              alt="back cover"
               className="thumbnail rounded-md cursor-pointer"
               onClick={(e) => {
                 setCurrentImage(1);
@@ -53,12 +53,12 @@ export const BuyACopy = () => {
         <div className="details-container">
           <h1 className="title">Slow Comics Presents: Nandi and the Castle in the Sea</h1>
           {/* <h2 className="title">Buy a Copy Now!</h2> */}
-          <h2 className="title">Preorder</h2>
-          <p className="description">
+          {/* <h2 className="title">Preorder</h2> */}
+          {/* <p className="description">
             Coming in April 2025!
-          </p>
+          </p> */}
           <p className="description">
-          25% Discount with Preorder
+          25% off cover price for book launch
           </p>
 
           <div className="quantity-container">
