@@ -50,7 +50,7 @@ app.post('/api/shippingCalculation', async (req, res) => {
   const customsItem = {
     description: "Graphic Novel",
     quantity: quantity,
-    netWeight: (2.5*quantity).toFixed(2), // Dynamically calculated
+    netWeight: (1.6*quantity).toFixed(2), // Dynamically calculated
     massUnit: "lb",
     valueAmount: (20 * quantity).toFixed(2), // Dynamically calculated
     valueCurrency: "USD",
@@ -70,9 +70,9 @@ app.post('/api/shippingCalculation', async (req, res) => {
         addressFrom,  // Sender's address
         addressTo: addressTo,    // Receiver's address
         parcels: [{
-          weight: (2.5 * quantity).toString(),  // Total weight in lbs
-          length: "9.25",  // Adjust based on parcel details
-          width: "6.25",
+          weight: (1.6 * quantity).toString(),  // Total weight in lbs
+          length: "10",  // Adjust based on parcel details
+          width: "7.5",
           height: (1 * quantity).toString(),  // Height = 1 * quantity (dynamic based on quantity)
           massUnit: "lb",  // Weight unit in lbs
           distanceUnit: "in"  // Dimension unit in inches
@@ -129,7 +129,7 @@ app.post('/api/placeOrder', async (req, res) => {
   const customsItem = {
   description: "Graphic Novel",
   quantity: quantity,
-  netWeight: (2.5*quantity).toFixed(2), // Dynamically calculated
+  netWeight: (1.6*quantity).toFixed(2), // Dynamically calculated
   massUnit: "lb",
   valueAmount: (20 * quantity).toFixed(2), // Dynamically calculated
   valueCurrency: "USD",
@@ -149,9 +149,9 @@ app.post('/api/placeOrder', async (req, res) => {
       addressFrom,  // Sender's address
       addressTo: address,    // Receiver's address
       parcels: [{
-        weight: (2.5 * quantity).toString(),  // Total weight in lbs
-        length: "9.25",  // Adjust based on parcel details
-        width: "6.25",
+        weight: (1.6 * quantity).toString(),  // Total weight in lbs
+        length: "10",  // Adjust based on parcel details
+        width: "7.5",
         height: (1 * quantity).toString(),  // Height = 1 * quantity (dynamic based on quantity)
         massUnit: "lb",  // Weight unit in lbs
         distanceUnit: "in"  // Dimension unit in inches
@@ -361,7 +361,7 @@ app.post("/api/request-otp", async (req, res) => {
 
     // Store OTP in the database
     await pool.query(
-      `INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3) 
+      `INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3)
        ON CONFLICT (email) DO UPDATE SET otp = $2, expires_at = $3`,
       [email, otp, expiresAt]
     );
