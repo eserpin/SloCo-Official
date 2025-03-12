@@ -12,6 +12,7 @@ export const Checkout = () => {
     name: "",
     email: "",
     street1: "",
+    apartment: "",
     city: "",
     state: "",
     zip: "",
@@ -28,7 +29,7 @@ export const Checkout = () => {
   const [total, setTotal] = useState(0);
 
   const location = useLocation();
-  
+
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const queryQuantity = parseInt(queryParams.get("quantity")) || 1;
@@ -38,12 +39,12 @@ export const Checkout = () => {
 
   const handleAddressSelect = (selectedPlace) => {
     const addressComponents = selectedPlace.address_components;
-  
+
     // Helper function to find component by type
     const getComponent = (type) => {
       return addressComponents.find((comp) => comp.types.includes(type))?.long_name || "";
     };
-  
+
     setAddress((prevAddress) => ({
       ...prevAddress,
       street1: `${getComponent("street_number")} ${getComponent("route")}`.trim(),
@@ -51,6 +52,7 @@ export const Checkout = () => {
       state: getComponent("administrative_area_level_1"),
       zip: getComponent("postal_code"),
       country: getComponent("country") || "US",
+      apartment: prevAddress.apartment,
     }));
     console.log(addressComponents);
   };
@@ -107,7 +109,7 @@ export const Checkout = () => {
             },
             shipping: {
               address: {
-                address_line_1: address.street1,
+                address_line_1: `${address.street1}${address.apartment ? ", " + address.apartment : ""}`,
                 admin_area_2: address.city,
                 admin_area_1: address.state,
                 postal_code: address.zip,
@@ -123,7 +125,7 @@ export const Checkout = () => {
       throw new Error("PayPal order creation failed");
     }
   };
-  
+
   const onApprove = async (data, actions) => {
     const order = await actions.order.capture(); // Capture the payment
 
@@ -134,7 +136,10 @@ export const Checkout = () => {
       quantity,
       total,
       transactionId: order.id,
-      address,
+      address: {
+        ...address,
+        street1: `${address.street1}${address.apartment ? ", " + address.apartment : ""}`,
+      },
     });
 
     alert("Payment successful! Your order has been placed.");
@@ -190,6 +195,15 @@ export const Checkout = () => {
             <label>
               Address
               <AddressForm onAddressSelect={handleAddressSelect} />
+            </label>
+            <label>
+              Apartment (Optional)
+              <input
+                type="text"
+                name="apartment"
+                value={address.apartment}
+                onChange={(e) => setAddress({ ...address, apartment: e.target.value })}
+              />
             </label>
           </div>
 
