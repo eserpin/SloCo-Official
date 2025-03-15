@@ -63,7 +63,10 @@ export const Checkout = () => {
 
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}api/shippingCalculation`, {
-        addressTo: address,
+        addressTo: {
+          ...address,
+          street2: address.apartment || "",
+        },
         quantity,
       });
       console.log(address);
@@ -109,7 +112,8 @@ export const Checkout = () => {
             },
             shipping: {
               address: {
-                address_line_1: `${address.street1}${address.apartment ? ", " + address.apartment : ""}`,
+                address_line_1: address.street1,
+                address_line_2: address.apartment || "",
                 admin_area_2: address.city,
                 admin_area_1: address.state,
                 postal_code: address.zip,
@@ -138,7 +142,7 @@ export const Checkout = () => {
       transactionId: order.id,
       address: {
         ...address,
-        street1: `${address.street1}${address.apartment ? ", " + address.apartment : ""}`,
+        street2: address.apartment || "", // Ensure Shippo gets it in the correct field
       },
     });
 
