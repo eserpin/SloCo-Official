@@ -126,6 +126,12 @@ app.post('/api/placeOrder', async (req, res) => {
   if (!name || !email || !quantity || !total || !transactionId || !address) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+  let lengthP = "10", widthP = "7.5", heightP = "1";
+  if (quantity >= 2 && quantity <= 4) {
+    lengthP = "9"; // Adjusted for multiple books
+    widthP = "9";
+    heightP = "5"; // Adjusted height
+  }
   const customsItem = {
   description: "Graphic Novel",
   quantity: quantity,
@@ -150,9 +156,9 @@ app.post('/api/placeOrder', async (req, res) => {
       addressTo: address,    // Receiver's address
       parcels: [{
         weight: (1.6 * quantity).toString(),  // Total weight in lbs
-        length: "10",  // Adjust based on parcel details
-        width: "7.5",
-        height: (1 * quantity).toString(),  // Height = 1 * quantity (dynamic based on quantity)
+        length: lengthP,  // Adjust based on parcel details
+        width: widthP,
+        height: heightP,  // Height = 1 * quantity (dynamic based on quantity)
         massUnit: "lb",  // Weight unit in lbs
         distanceUnit: "in"  // Dimension unit in inches
       }],
