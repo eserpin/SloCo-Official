@@ -6,6 +6,7 @@ import {BuyACopy} from "./components/BuyACopy";
 import {Checkout} from "./components/Checkout";
 import {ComicReader} from "./components/ComicReader";
 import {ReaderAuthenticate} from "./components/ReaderAuthenticate";
+import {ThankYou} from "./components/ThankYou";
 const App = () => {
   return (
     <PayPalScriptProvider options={{ "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID, currency: "USD" }}> 
@@ -17,6 +18,7 @@ const App = () => {
           <Route path="/checkout" component={Checkout} />
           <Route path="/read" component={ComicReader}/>
           <Route path="/readerAuth" component={ReaderAuthenticate}/>
+          <Route path="/thank-you" component={ThankYou}/>
         </Switch>
       </div>
     </Router>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useHistory } from "react-router-dom";
 import axios from "axios";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
@@ -29,6 +30,7 @@ export const Checkout = () => {
   const [total, setTotal] = useState(0);
 
   const location = useLocation();
+  const history = useHistory();
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -147,6 +149,7 @@ export const Checkout = () => {
     });
 
     alert("Payment successful! Your order has been placed.");
+    history.push("/thank-you");
   };
 
   return (
