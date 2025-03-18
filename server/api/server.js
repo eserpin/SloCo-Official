@@ -353,7 +353,7 @@ const transporter = nodemailer.createTransport({
 // Request OTP
 app.post("/api/request-otp", async (req, res) => {
   const { email } = req.body;
-
+  const lowerEmail = email.toLowerCase();
   try {
     // Check if email exists in orders table
     const result = await pool.query('SELECT * FROM orders WHERE email = $1', [email]);
@@ -367,9 +367,9 @@ app.post("/api/request-otp", async (req, res) => {
 
     // Store OTP in the database
     await pool.query(
-      `INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3)
+      `INSERT INTO otps (email, otp, expires_at) VALUES (LOWER($1), $2, $3)
        ON CONFLICT (email) DO UPDATE SET otp = $2, expires_at = $3`,
-      [email, otp, expiresAt]
+      [lowerEmail otp, expiresAt]
     );
 
     // Send OTP via email
@@ -391,12 +391,13 @@ app.post("/api/request-otp", async (req, res) => {
 // Verify OTP
 app.post("/api/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
+  const lowerEmail = email.toLowerCase();
   console.log("otp: " + otp);
   try {
     // Check if the OTP exists and is still valid
     const result = await pool.query(
-      "SELECT * FROM otps WHERE email = $1 AND otp = $2 AND expires_at > NOW()",
-      [email, otp]
+      "SELECT * FROM otps WHERE LOWER(email) = LOWER($1) AND otp = $2 AND expires_at > NOW()",
+      [lowerEmail, otp]
     );
     console.log(JSON.stringify(result));
     if (result.rows.length === 0) {
@@ -404,7 +405,8 @@ app.post("/api/verify-otp", async (req, res) => {
     }
 
     // OTP is valid, delete it after verification
-    await pool.query("DELETE FROM otps WHERE email = $1", [email]);
+    await pool.query("DELETE FROM otps WHERE LOWER(email) = LOWER($1)", [lowerEmail]);
+
 
     res.json({ message: "OTP verified, access granted" });
   } catch (error) {
