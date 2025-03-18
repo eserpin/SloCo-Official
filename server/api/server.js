@@ -369,7 +369,7 @@ app.post("/api/request-otp", async (req, res) => {
     await pool.query(
       `INSERT INTO otps (email, otp, expires_at) VALUES (LOWER($1), $2, $3)
        ON CONFLICT (email) DO UPDATE SET otp = $2, expires_at = $3`,
-      [lowerEmail otp, expiresAt]
+      [lowerEmail, otp, expiresAt]
     );
 
     // Send OTP via email
