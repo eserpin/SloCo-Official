@@ -57,7 +57,10 @@ export const BuyACopy = () => {
           {/* <p className="description">
             Coming in April 2025!
           </p> */}
-          <p className="description">
+          <p className="description1">
+            368 Page Full Color Graphic Novel
+          </p>
+          <p className="description2">
           25% off cover price for book launch
           </p>
 

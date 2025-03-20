@@ -284,6 +284,10 @@
     border-radius: 0.5rem;
     cursor: pointer;
   }
+  .description1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
   
   .details-container button:hover {
     background-color: var(--de-york);
