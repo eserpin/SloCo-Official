@@ -24,19 +24,31 @@ const shippo = new Shippo({
 });
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Define the addressFrom (Sender's address)
+// When Ani comes back change this back
+// const addressFrom = {
+//   name: 'Slow Comics',
+//   street1: '65 Honeck Street',
+//   street3: "",
+//   city: 'Englewood',
+//   state: 'NJ',
+//   zip: '07631',
+//   country: 'US',
+//   phone: '+1 646 851 3908',
+//   email: 'slow.comics.publishing@gmail.com',
+//   isResidential: false,
+// };
 const addressFrom = {
-  name: 'Slow Comics',
-  street1: '65 Honeck Street',
+    name: 'Slow Comics',
+  street1: '913 Northeast 2nd Court',
   street3: "",
-  city: 'Englewood',
-  state: 'NJ',
-  zip: '07631',
+  city: 'Hallandale Beach',
+  state: 'FL',
+  zip: '33009',
   country: 'US',
   phone: '+1 646 851 3908',
   email: 'slow.comics.publishing@gmail.com',
-  isResidential: false,
-};
+  isResidential: true,
+}
 
 // Route to calculate shipping rates
 app.post('/api/shippingCalculation', async (req, res) => {
