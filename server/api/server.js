@@ -24,7 +24,7 @@ app.use(cors()); // Enable Cross-Origin Resource Sharing
 app.use(bodyParser.json()); // Parse incoming JSON requests
 
 // Set up routes with updated paths
-app.use('/api/images/:chapter', imagesRoutes);         // Images routes (with chapter parameter)
+app.use('/api/images/', imagesRoutes);         // Images routes (with chapter parameter)
 app.use('/api/placeOrder', ordersRoutes);              // Place order route
 app.use('/api/shippingCalculation', shippingRoutes);   // Shipping calculation route
 app.use('/api/request-otp', requestOtp);                // OTP request route
