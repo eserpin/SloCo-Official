@@ -7,7 +7,7 @@ const transporter = require('../config/mailer'); // Import the email transporter
 const router = express.Router();
 
 // Place Order Route
-router.post('/placeOrder', async (req, res) => {
+router.post('/', async (req, res) => {
   const { name, email, quantity, total, transactionId, address } = req.body;
 
   if (!name || !email || !quantity || !total || !transactionId || !address) {
@@ -44,6 +44,7 @@ router.post('/placeOrder', async (req, res) => {
     console.log("Customs declaration created:", customsDeclaration);
 
     // Step 2: Create the shipment
+
     const shipment = await shippo.shipments.create({
       addressFrom: { /* Sender's address */ },
       addressTo: address,

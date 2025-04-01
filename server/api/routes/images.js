@@ -6,7 +6,7 @@ const s3 = require('../config/s3Client'); // Import the configured Cloudflare R2
 const router = express.Router();
 
 // Route to get image URLs for a specific chapter
-router.get('/images/:chapter', async (req, res) => {
+router.get('', async (req, res) => {
   try {
     const { chapter } = req.params;
     if (!chapter) {
