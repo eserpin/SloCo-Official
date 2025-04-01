@@ -9,7 +9,7 @@ const pool = require('./config/db'); // Your database configuration
 // Import routes
 const imagesRoutes = require('./routes/images');
 const ordersRoutes = require('./routes/orders');
-const requestOtp = require('./routes/requestOtp');
+const requestOtp = require('./routes/requestOtp.js');
 const verifyOtp = require('./routes/verifyOtp');
 const shippingRoutes = require('./routes/shipping');
 
