@@ -3,7 +3,7 @@ const { shippo, addressFrom } = require('../config/shippo'); // Import the Shipp
 
 const router = express.Router();
 
-router.post('/shippingCalculation', async (req, res) => {
+router.post('/', async (req, res) => {
   const { addressTo, quantity = 1 } = req.body;
   console.log(JSON.stringify(req.body, null, 2));
 

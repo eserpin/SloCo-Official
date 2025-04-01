@@ -4,7 +4,7 @@ const pool = require('../config/db'); // Import the database pool
 
 const router = express.Router();
 
-router.post('/verify-otp', async (req, res) => {
+router.post('/', async (req, res) => {
   const { email, otp } = req.body;
   const lowerEmail = email.toLowerCase();
   try {
