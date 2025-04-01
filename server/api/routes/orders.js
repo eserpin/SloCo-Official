@@ -7,7 +7,7 @@ const transporter = require('../config/mailer'); // Import the email transporter
 const router = express.Router();
 
 // Place Order Route
-router.post('/api/placeOrder', async (req, res) => {
+router.post('/placeOrder', async (req, res) => {
   const { name, email, quantity, total, transactionId, address } = req.body;
 
   if (!name || !email || !quantity || !total || !transactionId || !address) {

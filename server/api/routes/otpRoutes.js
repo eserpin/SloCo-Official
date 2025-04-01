@@ -6,7 +6,7 @@ const transporter = require('../config/mailer'); // Import the configured email 
 const router = express.Router();
 
 // Request OTP route
-router.post('/api/request-otp', async (req, res) => {
+router.post('/request-otp', async (req, res) => {
   const { email } = req.body;
   const lowerEmail = email.toLowerCase();
   try {
@@ -43,7 +43,7 @@ router.post('/api/request-otp', async (req, res) => {
 });
 
 // Verify OTP route
-router.post('/api/verify-otp', async (req, res) => {
+router.post('/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   const lowerEmail = email.toLowerCase();
   try {
