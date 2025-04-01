@@ -22,11 +22,12 @@ dotenv.config();
 app.use(cors()); // Enable Cross-Origin Resource Sharing
 app.use(bodyParser.json()); // Parse incoming JSON requests
 
-// Set up routes
-app.use('/api/images', imagesRoutes);   // Images routes
-app.use('/api/orders', ordersRoutes);   // Orders routes
-app.use('/api/otp', otpRoutes);         // OTP routes
-app.use('/api/shipping', shippingRoutes); // Shipping routes
+// Set up routes with updated paths
+app.use('/api/images/:chapter', imagesRoutes);         // Images routes (with chapter parameter)
+app.use('/api/placeOrder', ordersRoutes);              // Place order route
+app.use('/api/shippingCalculation', shippingRoutes);   // Shipping calculation route
+app.use('/api/request-otp', otpRoutes);                // OTP request route
+app.use('/api/verify-otp', otpRoutes);                 // OTP verification route
 
 // Root endpoint
 app.get('/', (req, res) => {
