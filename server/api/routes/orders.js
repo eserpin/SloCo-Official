@@ -1,7 +1,7 @@
 // routes/order.js
 const express = require('express');
 const pool = require('../config/db'); // Import the database pool
-const shippo = require('shippo'); // Ensure you have Shippo SDK configured
+const { shippo, addressFrom } = require('../config/shippo');
 const transporter = require('../config/mailer'); // Import the email transporter from mailer.js
 
 const router = express.Router();
