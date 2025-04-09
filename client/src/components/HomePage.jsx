@@ -7,16 +7,27 @@ export const HomePage = () => {
   return (
     <div id="body" className="home-page">
       <NavBar />
+      {/* 🚨 System Error Banner */}
+      <div style={{
+        backgroundColor: "#ffe4e6",
+        color: "#b91c1c",
+        padding: "10px 20px",
+        textAlign: "center",
+        fontWeight: "bold",
+        borderBottom: "2px solid #b91c1c"
+      }}>
+        If you ordered a book between 4/1–4/8, we had a system error and your order was not received (and also not charged). Please let us know if this is the case and we’ll fix you right up.
+      </div>
       <section id="home">
         <img id="homeImg"
-          src={promo} 
+          src={promo}
           alt="Comic Book Preview"
         />
       </section>
       <section id="about" class="home-page-section">
         <h2>About Us</h2>
         <p>
-        We are a small comic book publishing company who pride ourselves on quality stories that have themes of nature at their core. Our debut graphic novel, titled “Nandi and the Castle in the Sea,” is set for release in April 2025. We have been hard at work on bringing this story to life for 5 years now, and we can’t wait for you to read it. 
+        We are a small comic book publishing company who pride ourselves on quality stories that have themes of nature at their core. Our debut graphic novel, titled “Nandi and the Castle in the Sea,” is set for release in April 2025. We have been hard at work on bringing this story to life for 5 years now, and we can’t wait for you to read it.
         </p>
       </section>
       <section id="natcits" class="home-page-section">
