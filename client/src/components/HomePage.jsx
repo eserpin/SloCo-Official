@@ -9,8 +9,8 @@ export const HomePage = () => {
       <NavBar />
       {/* 🚨 System Error Banner */}
       <div style={{
-        backgroundColor: "#ffe4e6",
-        color: "#b91c1c",
+        backgroundColor: "#f4e9ea",
+        color: "#c0392b",
         padding: "10px 20px",
         textAlign: "center",
         fontWeight: "bold",

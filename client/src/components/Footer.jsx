@@ -12,7 +12,7 @@ const Footer = () => {
         target="_blank"
         rel="noopener noreferrer"
       >
-        <FaInstagram size={30} /> {/* Instagram icon */}
+        <FaInstagram size={30} id="instagram"/> {/* Instagram icon */}
       </a>
     </footer>
   );

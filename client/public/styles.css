@@ -1,16 +1,16 @@
 /* Color Variables */
 :root {
-    --waikawa-gray: #5b67a3;
-    --valencia: #d34b48;
-    --de-york: #8ccb9f;
-    --wafer: #e5d2d4;
-    --crail: #ba5d45;
-    --antique-brass: #caa077;
-    --ronchi: #eebd61;
-    --twine: #bc8850;
-    --woodland: #4e552c;
-    --conch: #d3e0d8;
-  }
+  --waikawa-gray: #4a548a;         /* Darkened for contrast - good for backgrounds or headings */
+  --valencia: #c0392b;             /* Slightly deeper red - excellent for buttons, alerts */
+  --de-york: #6fbf87;              /* Slightly darker green - great for success states or accents */
+  --wafer: #f4e9ea;                /* Light neutral - good background */
+  --crail: #a8422e;                /* Rich reddish-brown - great for accents or call-to-action */
+  --antique-brass: #b98c63;        /* Muted warm tone - great secondary accent or background */
+  --ronchi: #e6a82f;               /* Bolder yellow - works for highlights with caution */
+  --twine: #a0703b;                /* Better contrast for text on light backgrounds */
+  --woodland: #3e4421;             /* Darkened green - perfect for navbars, footers, base background */
+  --conch: #c7dcd1;                /* Cool contrast - gentle background or secondary UI color */
+}
 
   /* General Body Styles */
   body {
@@ -421,7 +421,7 @@
 
   /* Buttons */
   button {
-    background-color: var(--de-york);
+    background-color: var(--valencia);
     border: none;
     padding: 10px 20px;
     color: var(--wafer);
@@ -554,7 +554,7 @@
   .auth-description {
     font-size: 18px;
     margin-bottom: 20px;
-    color: #333;
+    color: var(--waikawa-gray);
     font-weight: 500;
   }
   /* Footer */
@@ -565,6 +565,9 @@
     color: var(--wafer);
     border-top: 1px solid var(--antique-brass);
     margin-top: 20px;
+  }
+  #instagram {
+    color: var(--conch);
   }
 
   /* Card Components */
