@@ -1,5 +1,5 @@
 # SloCo-Official
-# My Graphic Novel Website
+# The Slow Comics Website
 
 Welcome to the official repository for the Slow Comics e-commerce website! This site serves as a platform to showcase and sell graphic novels produced by Slow Comics, providing users with an easy way to purchase a copy and access a digital version.
 
