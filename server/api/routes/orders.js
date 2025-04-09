@@ -93,8 +93,8 @@ router.post('/', async (req, res) => {
 
     // Step 5: Save order to the database
     const query = `
-      INSERT INTO orders (transaction_id, name, email, quantity, total, address)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
+      INSERT INTO orders (transaction_id, name, email, quantity)
+      VALUES ($1, $2, $3, $4) RETURNING *;
     `;
     const values = [transactionId, name, email, quantity, total, JSON.stringify(address)];
     const { rows } = await pool.query(query, values);
