@@ -11,7 +11,7 @@
     --woodland: #4e552c;
     --conch: #d3e0d8;
   }
-  
+
   /* General Body Styles */
   body {
     font-family: Arial, sans-serif;
@@ -20,7 +20,7 @@
     background-color: var(--wafer);
     color: var(--waikawa-gray);
   }
-  
+
   /* Header */
   header {
     background-color: var(--ronchi);
@@ -28,7 +28,7 @@
     text-align: center;
     padding: 20px;
   }
-  
+
   /* Navbar */
   nav {
     display: flex;
@@ -49,26 +49,63 @@
     background: transparent;
     height: auto; /* Maintains aspect ratio */
   }
-  
+
   .navLinks {
     list-style: none;
     display: flex;
     gap: 1rem;
     text-align: center;
   }
-  
+
   .navLinks a {
     color: var(--wafer);
     text-decoration: none;
     font-weight: 500;
   }
-  
+  .navLinks.open {
+    display: flex;
+  }
+  .navLinks li {
+    margin: 0.5rem 0;
+    text-align: right;
+  }
+  .navLinks a {
+    color: var(--wafer);
+    text-decoration: none;
+    font-weight: 500;
+  }
   .navLinks a:visited {
     color: var(--wafer);
   }
-  
+
   .navLinks a:hover {
     color: var(--de-york); /* Hover color */
+  }
+  .hamburger {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--wafer);
+    cursor: pointer;
+  }
+  @media (min-width: 768px) {
+    .hamburger {
+      display: none;
+    }
+
+    .navLinks {
+      display: flex !important;
+      position: static;
+      flex-direction: row;
+      gap: 1rem;
+      background: none;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .navLinks li {
+      margin: 0;
+      text-align: center;
+    }
   }
   @media (max-width: 768px) {
     #nav-logo {
@@ -78,13 +115,42 @@
     .navbar {
         padding: 0.5rem; /* Reduce padding to save space */
     }
-    
+
     .navbar-links {
         gap: 0.5rem; /* Reduce spacing between links */
     }
 
     .navbar a {
         font-size: 0.875rem; /* Makes text smaller */
+    }
+    .navLinks {
+      position: absolute;
+      top: 60px; /* adjust based on navbar height */
+      left: 0;
+      right: 0;
+      background-color: var(--woodland);
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 0;
+      display: none;
+      z-index: 999;
+    }
+
+    .navLinks.open {
+      display: flex;
+      animation: slideDown 0.3s ease forwards;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 }
   /* Main Content */
@@ -95,16 +161,16 @@
     padding: 20px;
     text-align: center;
   }
-  
+
   section {
     margin-bottom: 40px;
   }
-  
+
   section h2 {
     color: var(--woodland);
     font-size: 2em;
   }
-  
+
   section p {
     color: var(--woodland);
     font-size: 1.2em;
@@ -116,12 +182,12 @@
   section h2{
     color: var(--wafer);
   }
-  
+
   #home {
     text-align: center;
     margin: 20px 0;
   }
-  
+
   #homeImg {
     max-width: 70%;
     height: auto;
@@ -133,7 +199,7 @@
       max-width: 90%; /* Increases size on smaller screens */
     }
   }
-  
+
   @media (max-width: 480px) {
     #homeImg {
       max-width: 100%; /* Ensures it takes up almost the full width */
@@ -168,7 +234,7 @@
     height: auto;
     text-align: center; /* Ensures text alignment is consistent */
   }
-  .image-gallery { 
+  .image-gallery {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -238,14 +304,14 @@
     object-fit: contain; /* Prevents stretching */
 }
 
-  
+
   @media (min-width: 768px) {
     .buy-container {
       flex-direction: row;
       align-items: flex-start;
     }
   }
-  
+
   @media (max-width: 768px) { /* Apply only on mobile */
     .thumbnail-container {
         max-width: 100px; /* Prevents excessive growth */
@@ -256,7 +322,7 @@
         height: 80px; /* Maintain aspect ratio */
     }
 }
-  
+
   .image {
     object-fit: contain;
     width: auto;
@@ -264,7 +330,7 @@
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
-  
+
   .details-container {
     flex: 1;
     text-align: center;
@@ -274,7 +340,7 @@
     flex-direction: column;
     margin: auto; /* Centers it horizontally */
   }
-  
+
   .details-container button {
     padding: 0.5rem 1rem;
     font-size: 1rem;
@@ -288,52 +354,52 @@
     font-size: 1.5rem;
     font-weight: bold;
   }
-  
+
   .details-container button:hover {
     background-color: var(--de-york);
   }
-  
+
   /* Mobile adjustments */
   @media (max-width: 768px) {
     .buy-container {
       flex-direction: column; /* Stack elements vertically */
       padding: 1rem;
     }
-  
-  
+
+
     .details-container {
       font-size: 1rem; /* Scale down text size */
       margin: auto; /* Ensure it's centered */
     }
   }
-  
+
   .title {
     font-size: 2rem;
     font-weight: bold;
   }
-  
+
   .description {
     font-size: 1rem;
     color: var(--waikawa-gray);
   }
-  
+
   .quantity-container {
     display: flex;
     flex-direction: column;
   }
-  
+
   .quantity-label {
     font-size: 1rem;
     margin-bottom: 5px;
   }
-  
+
   .quantity-select {
     padding: 10px;
     font-size: 1rem;
     border: 1px solid var(--wafer);
     border-radius: 5px;
   }
-  
+
   .price-container {
     font-size: 1.2rem;
     font-weight: bold;
@@ -347,12 +413,12 @@
   .discount-price {
     color: var(--valencia);
   }
-  
+
   .price-value {
     font-weight: bold;
     color: var(--waikawa-gray);
   }
-  
+
   /* Buttons */
   button {
     background-color: var(--de-york);
@@ -363,7 +429,7 @@
     cursor: pointer;
     border-radius: 5px;
   }
-  
+
   button:hover {
     background-color: var(--crail);
   }
@@ -381,35 +447,35 @@
     cursor: pointer;
     transition: background-color 0.2s ease-in-out;
   }
-  
+
   .checkout-button:hover {
     background-color: var(--waikawa-gray);
   }
-  
+
   /* Checkout page */
   .checkout-container {
     padding: 20px;
     max-width: 600px;
     margin: 0 auto;
   }
-  
+
   .title {
     font-size: 2em;
     margin-bottom: 20px;
   }
-  
+
   /* Make the form a flex container with vertical direction */
   .address-form {
     display: flex;
     flex-direction: column; /* Stacks elements vertically */
     gap: 15px; /* Adds spacing between the elements */
   }
-  
+
   .address-form label {
     font-size: 1.1em;
     margin-bottom: 5px;
   }
-  
+
   .address-form input {
     width: 100%;
     padding: 10px;
@@ -418,7 +484,7 @@
     border-radius: 5px;
     border: 1px solid var(--conch);
   }
-  
+
   .confirm-button {
     background-color: var(--de-york);
     color: var(--woodland);
@@ -429,17 +495,17 @@
     width: 100%;
     font-size: 16px;
   }
-  
+
   .confirm-button:disabled {
     background-color: var(--conch);
   }
-  
+
   .error {
     color: var(--valencia);
     font-size: 1.2em;
     margin-top: 20px;
   }
-  
+
   .shipping-details {
     margin-top: 20px;
   }
@@ -454,19 +520,19 @@
     min-height: 100vh; /* Ensures full-page centering */
     text-align: center;
   }
-  
+
   .comic-reader-title {
     font-size: 1.5rem;
     font-weight: bold;
     margin-bottom: 10px;
   }
-  
+
   .comic-reader-image {
     height: 70vh; /* 70% of the viewport height */
     max-width: 90vw; /* Ensures it doesn’t overflow */
     object-fit: contain; /* Maintains aspect ratio */
   }
-  
+
   .comic-reader-navigation {
     display: flex;
     justify-content: center;
@@ -474,17 +540,17 @@
     margin-top: 10px;
     gap: 10px; /* Space between buttons */
   }
-  
+
   .comic-reader-navigation button {
     cursor: pointer;
     padding: 5px;
   }
-  
+
   /* Reader Authentication */
   .reader-auth {
     text-align: center;
   }
-  
+
   .auth-description {
     font-size: 18px;
     margin-bottom: 20px;
@@ -500,7 +566,7 @@
     border-top: 1px solid var(--antique-brass);
     margin-top: 20px;
   }
-  
+
   /* Card Components */
   .card {
     background-color: var(--wafer);
@@ -510,16 +576,15 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s;
   }
-  
+
   .card:hover {
     transform: scale(1.05);
   }
-  
+
   .card h3 {
     color: var(--ronchi);
   }
-  
+
   .card p {
     color: var(--woodland);
   }
-  
