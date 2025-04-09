@@ -96,7 +96,8 @@ router.post('/', async (req, res) => {
       INSERT INTO orders (transaction_id, name, email, quantity)
       VALUES ($1, $2, $3, $4) RETURNING *;
     `;
-    const values = [transactionId, name, email, quantity, total, JSON.stringify(address)];
+    const values = [transactionId, name, email, quantity];
+
     const { rows } = await pool.query(query, values);
     if (rows.length === 0) {
       throw new Error('Order was not saved in the database.');
