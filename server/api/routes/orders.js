@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
     // Step 2: Create the shipment
 
     const shipment = await shippo.shipments.create({
-      addressFrom: { /* Sender's address */ },
+      addressFrom: addressFrom,
       addressTo: address,
       parcels: [{
         weight: (1.6 * quantity).toString(),
