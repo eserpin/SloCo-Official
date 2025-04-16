@@ -234,76 +234,149 @@
     height: auto;
     text-align: center; /* Ensures text alignment is consistent */
   }
-  .image-gallery {
+  /*
+  Image Carousel
+  */
+  .image-carousel {
     display: flex;
-    flex-direction: row;
+    position: relative;
+    height: 75vh;
     align-items: center;
-    gap: 1rem;
+    gap: 16px;
+    padding: 0 40px;
+    box-sizing: border-box;
     overflow: hidden;
-
-}
-@media (min-width: 1600px) {
-  .image-gallery {
-      padding-left: 12rem; /* Adjust as needed to move it slightly right */
   }
-  .details-container {
-    padding-left: 12rem;
-  }
-}
 
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-    .image-gallery {
-        max-height: 60vh; /* Reduce height on mobile */
-    }
-
-    .current-image-container {
-        max-width: 90%; /* Prevents image from taking up full width */
-    }
-
-    .current-image {
-        max-height: 50vh; /* Ensures image does not take up too much space */
-    }
-
-    .thumbnail-container {
-        flex-direction: row; /* Display thumbnails in a row instead */
-        justify-content: center; /* Center the thumbnails */
-        gap: 5px;
-    }
-
-    .thumbnail {
-        width: 60px; /* Reduce thumbnail size for mobile */
-    }
-}
-
-
-.thumbnail-container {
+  .thumbnail-column {
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Proper spacing between thumbnails */
-    height: auto; /* Maintains aspect ratio */
-    object-fit: contain; /* Ensures the whole image fits inside */
-}
+    justify-content: space-evenly; /* evenly distribute thumbnails */
+    align-items: center; /* center thumbnails horizontally */
+    height: 100%;
+    padding: 10px;
+  }
 
-.thumbnail {
-    width: 100px; /* Keeps a fixed width */
-    height: auto; /* Maintain aspect ratio */
+  .carousel-thumbnails {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    height: 100%;
+  }
+
+  .carousel-thumbnails img {
+    width: 90px;
+    height: 100px;
+    object-fit: cover;
     cursor: pointer;
-    object-fit: contain; /* Ensures the whole image fits inside */
-}
+    border-radius: 10px;
+    transition: transform 0.2s, border 0.2s;
+  }
 
-.current-image-container {
-    flex: 1; /* Allows image container to resize naturally */
+  /* Optional: Larger thumbnails on big screens */
+  @media (min-width: 1024px) {
+    .carousel-thumbnails img {
+      width: 100px;
+      height: 120px;
+    }
+  }
+  @media (max-width: 768px) {
+    .image-carousel {
+      flex-direction: column; /* Stack the items vertically */
+      height: auto; /* Dynamic height */
+    }
+
+    /* Ensure Thumbnails are below the image carousel */
+    .thumbnail-column {
+      flex-direction: row; /* Thumbnails in a horizontal row */
+      justify-content: center; /* Center the thumbnails */
+      padding: 0; /* Remove extra padding */
+      width: 100%;
+      order: 1; /* Ensure thumbnails are at the bottom (after image) */
+    }
+
+    /* Adjust thumbnail layout */
+    .carousel-thumbnails {
+      flex-direction: row; /* Display thumbnails horizontally */
+      justify-content: center;
+      width: 100%;
+    }
+
+    .carousel-thumbnails img {
+      width: 60px;
+      height: 60px;
+      margin: 0 8px; /* Add space between thumbnails */
+    }
+
+    /* Make the image fit to container width on mobile */
+    .carousel-photo {
+      width: 100%; /* Take full width of the container */
+      height: auto; /* Adjust height accordingly */
+    }
+    .carousel-arrow {
+      display: none;
+    }
+  }
+
+  .carousel-thumbnails img.highlighted {
+    border: 2px solid #007bff;
+    transform: scale(1.05);
+  }
+
+  .carousel-main-image {
+    flex-grow: 1;
+    height: 100%;
     display: flex;
     justify-content: center;
-}
+    align-items: center;
+    overflow: hidden;
+  }
+  .currentSlide {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .carousel-photo {
+    height: 100%;
+    width: 100%;
+    object-fit: contain; /* Make sure the whole image fits inside */
+  }
 
-.current-image {
-    max-width: 100%; /* Ensures image scales responsively */
-    height: auto; /* Maintains aspect ratio */
-    object-fit: contain; /* Prevents stretching */
-}
 
+  .carousel-arrow {
+    top: 50%;
+    font-size: 2rem;
+    color: #333;
+    cursor: pointer;
+    z-index: 2;
+    user-select: none;
+  }
+
+  .left-arrow {
+    left: 10px;
+  }
+
+  .right-arrow {
+    right: 10px;
+  }
+
+
+
+
+  /*
+  Product Info
+  */
+
+  .product-info-box {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding-left: 10%;
+  }
 
   @media (min-width: 768px) {
     .buy-container {
@@ -312,24 +385,6 @@
     }
   }
 
-  @media (max-width: 768px) { /* Apply only on mobile */
-    .thumbnail-container {
-        max-width: 100px; /* Prevents excessive growth */
-    }
-
-    .thumbnail-container img {
-        width: 80px; /* Adjust thumbnail size */
-        height: 80px; /* Maintain aspect ratio */
-    }
-}
-
-  .image {
-    object-fit: contain;
-    width: auto;
-    height: 50vh;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
 
   .details-container {
     flex: 1;
@@ -364,6 +419,7 @@
     .buy-container {
       flex-direction: column; /* Stack elements vertically */
       padding: 1rem;
+      justify-content: center;
     }
 
 
