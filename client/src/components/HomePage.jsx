@@ -7,17 +7,6 @@ export const HomePage = () => {
   return (
     <div id="body" className="home-page">
       <NavBar />
-      {/* 🚨 System Error Banner */}
-      <div style={{
-        backgroundColor: "#f4e9ea",
-        color: "#c0392b",
-        padding: "10px 20px",
-        textAlign: "center",
-        fontWeight: "bold",
-        borderBottom: "2px solid #b91c1c"
-      }}>
-        If you ordered a book between 4/1–4/8, we had a system error and your order was not received (and also not charged). Please let us know if this is the case and we’ll fix you right up.
-      </div>
       <section id="home">
         <img id="homeImg"
           src={promo}
