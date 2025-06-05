@@ -1,27 +1,4 @@
-Eren
-ckeren
-Invisible
 
-Eren — 5/25/2025 10:07 PM
-https://discord.gg/k5zS9Jcs
-Eren — 5/26/2025 11:43 AM
-Image
-Image
-Eren — 5/26/2025 12:13 PM
-What's up everybody. For those of you who don't know me I'm Eren. I’ve known Jimmy since 6th grade — back when we were just kids playing Chinese poker and Yu-Gi-Oh! at lunch and pretending we understood what was going on in Ms. Alfeiri’s math class.
-
-We were pretty cool with each other, but one day, Jimmy found out I liked basketball, so he invited me to hop on the yellow bus back to his neighborhood so we could play ball and chill. We had so much fun that it became a regular thing. Week after week, we’d kick it, shoot around at McDonald Ave park, and just talk about whatever 11-year-olds talk about. Eventually, our basketball duo turned into a trio with Eric, then a squad with Alex. Somehow, we’re all still tight to this day — which honestly might be more impressive than this wedding.
-
-Jimmy’s been my brother for 15 years — my day one. And I've always known how solid of a guy he was.
-
-Then came Kristina.
-
-I met her about 7 years ago, and right away I thought, “Okay, she’s cool.” But what really got me was how obnoxiously happy Jimmy became. I’m talking, bringing-her-up-in-every-conversation happy. At first, I was like, “Bro, chill,” but then I realized: this wasn’t just a crush — my guy was gone. And honestly? It was beautiful.
-
-Kristina, you bring out a version of Jimmy that’s joyful, grounded, and even though it feels like he tries not to be as goofy around you, he fails miserably. You two just work well together. And it makes all of us happy to see.
-
-So let’s raise a glass — to true love, lifelong friendship, and the poor souls who had to guard Jimmy during our pickup games. Cheers guys
-Eren — 2:38 PM
 import React, { useState } from "react";
 import { Link } from 'react-router-dom';
 import NavBar from "./NavBar";
