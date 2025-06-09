@@ -88,7 +88,7 @@ export const BuyACopy = () => {
               </div>
             ) : (
               <div className="price">
-                <span className="discount-price">$10 (Digital Download)</span>
+                <span className="discount-price">$20 (Digital Download)</span>
               </div>
             )}
           </div>
