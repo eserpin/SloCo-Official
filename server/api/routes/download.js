@@ -1,15 +1,23 @@
 // routes/download.js
 const express = require('express');
-const path = require('path');
 const pool = require('../config/db');
+const { google } = require('googleapis');
+const stream = require('stream');
+require('dotenv').config();
 
 const router = express.Router();
 
+// Initialize Google Drive auth
+const auth = new google.auth.GoogleAuth({
+  credentials: JSON.parse(process.env.PDF_SERVICE_KEY),
+  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+});
+const drive = google.drive({ version: 'v3', auth });
 router.get('/:token', async (req, res) => {
   const { token } = req.params;
 
   try {
-    // Check if token exists, is not expired (48h), and has uses left
+    // Check token validity
     const result = await pool.query(`
       SELECT * FROM download_tokens
       WHERE token = $1
@@ -28,15 +36,20 @@ router.get('/:token', async (req, res) => {
       WHERE token = $1
     `, [token]);
 
-    // Path to your PDF file
-    const filePath = path.join(__dirname, '..', 'public', 'nandi.pdf');
+    // Stream file from Google Drive
+    const fileId = process.env.GDRIVE_FILE_ID;
 
-    // Send the file as download
-    res.download(filePath, 'Nandi_and_the_Castle_in_the_Sea.pdf', (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        res.status(500).send('Error sending file.');
-      }
+    const driveRes = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'stream' }
+    );
+
+    res.setHeader('Content-Disposition', 'attachment; filename="Nandi_and_the_Castle_in_the_Sea.pdf"');
+    res.setHeader('Content-Type', 'application/pdf');
+
+    driveRes.data.pipe(res).on('error', (err) => {
+      console.error('Stream error:', err);
+      res.status(500).send('Failed to stream file.');
     });
 
   } catch (error) {
