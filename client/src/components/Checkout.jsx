@@ -153,7 +153,13 @@ export const Checkout = () => {
 
     await axios.post(`${process.env.REACT_APP_API_URL}${endpoint}`, payload);
 
-    alert("Payment successful! Your order has been placed.");
+    if (format === "digital") {
+      alert(
+        "✅ Payment successful! A download link has been sent to your email.\n\n📥 The link is valid for 48 hours and can be used up to 3 times."
+      );
+    } else {
+      alert("✅ Payment successful! Your order has been placed.");
+    }
     history.push("/thank-you");
   };
 
