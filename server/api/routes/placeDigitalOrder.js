@@ -31,8 +31,8 @@ router.post('/', async (req, res) => {
       [token, orderId]
     );
 
-    // Link to backend (not frontend!)
     const downloadLink = `${process.env.BACKEND_URL}api/download/${token}`;
+    console.log("DOWNLOAD LINK- " + downloadLink);
 
     // Email the user
     await transporter.sendMail({

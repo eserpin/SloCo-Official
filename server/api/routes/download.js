@@ -1,4 +1,3 @@
-// routes/download.js
 const express = require('express');
 const { google } = require('googleapis');
 const pool = require('../config/db');
@@ -13,6 +12,7 @@ const drive = google.drive({ version: 'v3', auth });
 
 router.get('/:token', async (req, res) => {
   const { token } = req.params;
+  console.log('Download route called with token:', token);
 
   try {
     // Check token validity
