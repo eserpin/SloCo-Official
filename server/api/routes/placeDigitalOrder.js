@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
-      text: `Thank you for your purchase!\n\nDownload your book here:\n${downloadLink}\n\nThis link is valid for 3 downloads and expires in 48 hours.`,
+      text: `Thank you for your purchase! This link is valid for 3 downloads and expires in 48 hours.\n\nDownload your book here:\n${downloadLink}\n\n`,
     });
 
     res.status(200).json({
