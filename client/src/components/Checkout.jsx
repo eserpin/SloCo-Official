@@ -9,6 +9,7 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import countryCodes from "../assets/countryCodes";
 
 export const Checkout = () => {
+  const [format, setFormat] = useState("physical");
   const [address, setAddress] = useState({
     name: "",
     email: "",
@@ -31,10 +32,12 @@ export const Checkout = () => {
 
   const location = useLocation();
   const history = useHistory();
-
+  console.log(format);
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
+    const queryFormat = queryParams.get("format") || "physical";
     const queryQuantity = parseInt(queryParams.get("quantity")) || 1;
+    setFormat(queryFormat);
     setQuantity(queryQuantity);
     setSubtotal(queryQuantity * 20);
   }, [location.search]);
@@ -100,57 +103,60 @@ export const Checkout = () => {
   };
 
   const createOrder = async (data, actions) => {
-    console.log("Shipping Address: ", address);
-    console.log("Currency: ", currency);  // Should be "USD" or a supported currency
-    console.log("Total: ", total);  // Should be a valid number
 
-    try {
-      return await actions.order.create({
-        purchase_units: [
-          {
-            amount: {
-              currency_code: currency,
-              value: total.toFixed(2),
-            },
-            shipping: {
-              address: {
-                address_line_1: address.street1,
-                address_line_2: address.apartment || "",
-                admin_area_2: address.city,
-                admin_area_1: address.state,
-                postal_code: address.zip,
-                country_code: countryCodes[address.country] || "US",
-                phone: address.phone,  // Add phone number here
-              },
+  return await actions.order.create({
+    purchase_units: [
+      {
+        amount: {
+          currency_code: currency,
+          value: total.toFixed(2),
+        },
+        ...(format === "physical" && {
+          shipping: {
+            address: {
+              address_line_1: address.street1,
+              address_line_2: address.apartment || "",
+              admin_area_2: address.city,
+              admin_area_1: address.state,
+              postal_code: address.zip,
+              country_code: countryCodes[address.country] || "US",
+              phone: address.phone,
             },
           },
-        ],
-      });
-    } catch (error) {
-      console.error("PayPal Order Creation Error:", error);
-      throw new Error("PayPal order creation failed");
-    }
-  };
+        }),
+      },
+    ],
+  });
+};
+
 
   const onApprove = async (data, actions) => {
-    const order = await actions.order.capture(); // Capture the payment
+    const order = await actions.order.capture();
 
-    // Send order details to your backend for order processing
-    await axios.post(`${process.env.REACT_APP_API_URL}api/placeOrder`, {
+    const endpoint = format === "digital"
+      ? "api/placeDigitalOrder"
+      : "api/placeOrder";
+
+    const payload = {
       name: address.name,
       email: address.email,
       quantity,
-      total,
+      total: format === "digital" ? 20 : total,
       transactionId: order.id,
-      address: {
-        ...address,
-        street2: address.apartment || "", // Ensure Shippo gets it in the correct field
-      },
-    });
+      ...(format === "physical" && {
+        address: {
+          ...address,
+          street2: address.apartment || "",
+        },
+      }),
+    };
+
+    await axios.post(`${process.env.REACT_APP_API_URL}${endpoint}`, payload);
 
     alert("Payment successful! Your order has been placed.");
     history.push("/thank-you");
   };
+
 
   return (
     <PayPalScriptProvider options={{ "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID }}>
@@ -163,7 +169,7 @@ export const Checkout = () => {
             <strong>${subtotal}</strong>.
           </p>
 
-          {/* Name and Email Form */}
+          {/* Name and Email Form - Always Required */}
           <div className="address-form">
             <label>
               Name
@@ -185,39 +191,59 @@ export const Checkout = () => {
                 required
               />
             </label>
+            {format === "physical" && (
             <label>
-            Phone Number
-              <input
-                type="text"
-                name="phone"
-                value={address.phone}
-                onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                required
-              />
-            </label>
+                Phone Number
+                <input
+                  type="text"
+                  name="phone"
+                  value={address.phone}
+                  onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                  required
+                />
+              </label>)}
           </div>
 
-          {/* Address Form */}
-          <div className="address-form">
-            <label>
-              Address
-              <AddressForm onAddressSelect={handleAddressSelect} />
-            </label>
-            <label>
-              Apartment (Optional)
-              <input
-                type="text"
-                name="apartment"
-                value={address.apartment}
-                onChange={(e) => setAddress({ ...address, apartment: e.target.value })}
-              />
-            </label>
-          </div>
+          {format === "physical" && (
+            <>
+              <div className="address-form">
+                <label>
+                  Address
+                  <AddressForm onAddressSelect={handleAddressSelect} />
+                </label>
+                <label>
+                  Apartment (Optional)
+                  <input
+                    type="text"
+                    name="apartment"
+                    value={address.apartment}
+                    onChange={(e) => setAddress({ ...address, apartment: e.target.value })}
+                  />
+                </label>
+              </div>
+            </>
+          )}
 
           {/* Calculate Shipping Button */}
-          <button className="confirm-button" type="button" onClick={calculateShipping} disabled={loading}>
-            {loading ? "Calculating..." : "Calculate Shipping"}
-          </button>
+         {format === "physical" ? (
+          <>
+            <button className="confirm-button" type="button" onClick={calculateShipping} disabled={loading}>
+              {loading ? "Calculating..." : "Calculate Shipping"}
+            </button>
+
+            {shippingPrice !== null && (
+              <div className="shipping-details">
+                <h2>Shipping Breakdown</h2>
+                <p><strong>Subtotal:</strong> ${subtotal.toFixed(2)}</p>
+                <p><strong>Shipping:</strong> ${shippingPrice.toFixed(2)}</p>
+                <p><strong>Total:</strong> ${total.toFixed(2)}</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <p><strong>Total:</strong> $20</p>
+        )}
+
 
           {/* Error Message */}
           {error && <p className="error">{error}</p>}
@@ -239,7 +265,15 @@ export const Checkout = () => {
           )}
 
           {/* PayPal Button */}
-          {shippingPrice !== null && (
+          {format === "digital" && (
+            <PayPalButtons
+              style={{ layout: "vertical" }}
+              createOrder={createOrder}
+              onApprove={onApprove}
+              fundingSource="paypal"
+            />
+          )}
+          {format === "physical" && shippingPrice !== null && (
             <PayPalButtons
             style={{
               layout: "vertical",

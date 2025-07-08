@@ -8,11 +8,18 @@ import back from "../images/back.jpeg";
 
 export const BuyACopy = () => {
   const [quantity, setQuantity] = useState(1);
+  const [format, setFormat] = useState("physical");
   const pricePerCopy = 20;
   const totalPrice = pricePerCopy * quantity;
 
   const handleQuantityChange = (event) => {
     setQuantity(parseInt(event.target.value));
+  };
+  const handleFormatChange = (event) => {
+    setFormat(event.target.value);
+    if (event.target.value === "digital") {
+      setQuantity(1); 
+    }
   };
 
   return (
@@ -28,35 +35,71 @@ export const BuyACopy = () => {
           <p className="description1">368 Page Full Color Graphic Novel</p>
           <p className="description2">25% off cover price for book launch</p>
 
-          <div className="quantity-container">
-            <label htmlFor="quantity" className="quantity-label">Quantity</label>
-            <select
-              id="quantity"
-              value={quantity}
-              onChange={handleQuantityChange}
-              className="quantity-select"
-            >
-              {[...Array(4).keys()].map((num) => (
-                <option key={num + 1} value={num + 1}>
-                  {num + 1}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="price-container">
-            <div className="price">
-              <span className="original-price">$27</span>
-              <span className="discount-price">$20</span>
+           {/* Format Selection */}
+           <div className="format-container">
+            <label className="format-label">Select Format:</label>
+            <div className="format-options">
+              <label>
+                <input
+                  type="radio"
+                  value="physical"
+                  checked={format === "physical"}
+                  onChange={handleFormatChange}
+                />
+                Physical Copy
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="digital"
+                  checked={format === "digital"}
+                  onChange={handleFormatChange}
+                />
+                Digital Copy (Download)
+              </label>
             </div>
           </div>
 
-          <Link
-            to={`/checkout?quantity=${quantity}&total=${totalPrice}`}
-            className="checkout-button"
-          >
-            Check Out
-          </Link>
+          {/* Quantity Selector only for physical */}
+          {format === "physical" && (
+            <div className="quantity-container">
+              <label htmlFor="quantity" className="quantity-label">Quantity</label>
+              <select
+                id="quantity"
+                value={quantity}
+                onChange={handleQuantityChange}
+                className="quantity-select"
+              >
+                {[...Array(4).keys()].map((num) => (
+                  <option key={num + 1} value={num + 1}>
+                    {num + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Price */}
+          <div className="price-container">
+            {format === "physical" ? (
+              <div className="price">
+                <span className="original-price">$27</span>
+                <span className="discount-price">${pricePerCopy}</span>
+              </div>
+            ) : (
+              <div className="price">
+                <span className="discount-price">$20 (Digital Download)</span>
+              </div>
+            )}
+          </div>
+
+        <Link
+          to={`/checkout?quantity=${quantity}&total=${totalPrice}&format=${format}`}
+          className="checkout-button"
+        >
+          Check Out
+        </Link>
+
         </div>
       </div>
       <Footer/>

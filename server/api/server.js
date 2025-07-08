@@ -12,6 +12,8 @@ const ordersRoutes = require('./routes/orders');
 const requestOtp = require('./routes/requestOtp.js');
 const verifyOtp = require('./routes/verifyOtp');
 const shippingRoutes = require('./routes/shipping');
+const placeDigitalOrder = require('./routes/placeDigitalOrder');
+const downloadRoute = require('./routes/download');
 
 // Initialize express
 const app = express();
@@ -29,7 +31,8 @@ app.use('/api/placeOrder', ordersRoutes);              // Place order route
 app.use('/api/shippingCalculation', shippingRoutes);   // Shipping calculation route
 app.use('/api/request-otp', requestOtp);                // OTP request route
 app.use('/api/verify-otp', verifyOtp);                 // OTP verification route
-
+app.use('/api/placeDigitalOrder', placeDigitalOrder); // Digital Order Route
+app.use('/download', downloadRoute); // Download route
 // Root endpoint
 app.get('/', (req, res) => {
   res.send('Welcome to the Slow Comics API!');
