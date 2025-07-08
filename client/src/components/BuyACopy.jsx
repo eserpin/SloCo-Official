@@ -78,9 +78,63 @@ export const BuyACopy = () => {
               </select>
             </div>
           )}
+           {/* Format Selection */}
+           <div className="format-container">
+            <label className="format-label">Select Format:</label>
+            <div className="format-options">
+              <label>
+                <input
+                  type="radio"
+                  value="physical"
+                  checked={format === "physical"}
+                  onChange={handleFormatChange}
+                />
+                Physical Copy
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="digital"
+                  checked={format === "digital"}
+                  onChange={handleFormatChange}
+                />
+                Digital Copy (Download)
+              </label>
+            </div>
+          </div>
+
+          {/* Quantity Selector only for physical */}
+          {format === "physical" && (
+            <div className="quantity-container">
+              <label htmlFor="quantity" className="quantity-label">Quantity</label>
+              <select
+                id="quantity"
+                value={quantity}
+                onChange={handleQuantityChange}
+                className="quantity-select"
+              >
+                {[...Array(4).keys()].map((num) => (
+                  <option key={num + 1} value={num + 1}>
+                    {num + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Price */}
+          {/* Price */}
           <div className="price-container">
+            {format === "physical" ? (
+              <div className="price">
+                <span className="original-price">$27</span>
+                <span className="discount-price">${pricePerCopy}</span>
+              </div>
+            ) : (
+              <div className="price">
+                <span className="discount-price">$20 (Digital Download)</span>
+              </div>
+            )}
             {format === "physical" ? (
               <div className="price">
                 <span className="original-price">$27</span>
