@@ -1,18 +1,16 @@
 // routes/download.js
 const express = require('express');
-const pool = require('../config/db');
 const { google } = require('googleapis');
-const stream = require('stream');
-require('dotenv').config();
+const pool = require('../config/db');
 
 const router = express.Router();
 
-// Initialize Google Drive auth
 const auth = new google.auth.GoogleAuth({
   credentials: JSON.parse(process.env.PDF_SERVICE_KEY),
   scopes: ['https://www.googleapis.com/auth/drive.readonly'],
 });
 const drive = google.drive({ version: 'v3', auth });
+
 router.get('/:token', async (req, res) => {
   const { token } = req.params;
 
@@ -36,7 +34,7 @@ router.get('/:token', async (req, res) => {
       WHERE token = $1
     `, [token]);
 
-    // Stream file from Google Drive
+    // Stream PDF from Google Drive
     const fileId = process.env.GDRIVE_FILE_ID;
 
     const driveRes = await drive.files.get(
@@ -48,13 +46,13 @@ router.get('/:token', async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
 
     driveRes.data.pipe(res).on('error', (err) => {
-      console.error('Stream error:', err);
+      console.error('Error streaming PDF:', err);
       res.status(500).send('Failed to stream file.');
     });
 
-  } catch (error) {
-    console.error('Download error:', error);
-    res.status(500).send('Server error.');
+  } catch (err) {
+    console.error('Download route error:', err);
+    res.status(500).send('Server error');
   }
 });
 

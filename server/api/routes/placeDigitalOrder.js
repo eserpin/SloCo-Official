@@ -2,8 +2,6 @@ const express = require('express');
 const pool = require('../config/db');
 const transporter = require('../config/mailer');
 const crypto = require('crypto');
-require('dotenv').config();
-
 const router = express.Router();
 
 router.post('/', async (req, res) => {
@@ -14,7 +12,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // 1. Save digital order
+    // Insert the order
     const orderResult = await pool.query(
       `INSERT INTO digital_orders (name, email, transaction_id)
        VALUES ($1, $2, $3) RETURNING id`,
@@ -23,36 +21,34 @@ router.post('/', async (req, res) => {
 
     const orderId = orderResult.rows[0].id;
 
-    // 2. Generate secure token
+    // Generate token
     const token = crypto.randomBytes(32).toString('hex');
 
-    // 3. Save token with 3 allowed uses
+    // Store token
     await pool.query(
       `INSERT INTO download_tokens (token, order_id, uses_left)
        VALUES ($1, $2, 3)`,
       [token, orderId]
     );
 
-    // 4. Compose download link
-    const downloadLink = `https://slowcomics.com/download/${token}`;
+    // Link to backend (not frontend!)
+    const downloadLink = `${process.env.BACKEND_URL}/api/download/${token}`;
 
-    // 5. Send email with download link
-    const mailOptions = {
+    // Email the user
+    await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
-      text: `Thank you for your purchase!\n\nYou can download your digital copy using the link below:\n\n${downloadLink}\n\nThis link is valid for 3 downloads and expires in 48 hours.`,
-    };
+      text: `Thank you for your purchase!\n\nDownload your book here:\n${downloadLink}\n\nThis link is valid for 3 downloads and expires in 48 hours.`,
+    });
 
-    await transporter.sendMail(mailOptions);
-
-    // 6. Respond with success and optional link
     res.status(200).json({
-      message: 'Order successful. Link sent via email.',
+      message: 'Order placed successfully. Download link sent via email.',
       downloadLink,
     });
-  } catch (error) {
-    console.error('Order error:', error);
+
+  } catch (err) {
+    console.error('Order error:', err);
     res.status(500).json({ error: 'Server error processing order.' });
   }
 });
