@@ -28,7 +28,7 @@ export const Checkout = () => {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [subtotal, setSubtotal] = useState(20);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(20);
 
   const location = useLocation();
   const history = useHistory();
@@ -247,22 +247,6 @@ export const Checkout = () => {
 
           {/* Error Message */}
           {error && <p className="error">{error}</p>}
-
-          {/* Display Shipping Details */}
-          {shippingPrice !== null && (
-            <div className="shipping-details">
-              <h2>Shipping Breakdown</h2>
-              <p>
-                <strong>Subtotal:</strong> ${subtotal.toFixed(2)}
-              </p>
-              <p>
-                <strong>Shipping:</strong> ${shippingPrice.toFixed(2)}
-              </p>
-              <p>
-                <strong>Total:</strong> ${total.toFixed(2)}
-              </p>
-            </div>
-          )}
 
           {/* PayPal Button */}
           {format === "digital" && (
