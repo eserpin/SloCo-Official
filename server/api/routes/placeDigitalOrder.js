@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
     );
 
     // Link to backend (not frontend!)
-    const downloadLink = `${process.env.BACKEND_URL}/api/download/${token}`;
+    const downloadLink = `${process.env.BACKEND_URL}api/download/${token}`;
 
     // Email the user
     await transporter.sendMail({
