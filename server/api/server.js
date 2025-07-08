@@ -32,7 +32,7 @@ app.use('/api/shippingCalculation', shippingRoutes);   // Shipping calculation r
 app.use('/api/request-otp', requestOtp);                // OTP request route
 app.use('/api/verify-otp', verifyOtp);                 // OTP verification route
 app.use('/api/placeDigitalOrder', placeDigitalOrder); // Digital Order Route
-app.use('/download', downloadRoute); // Download route
+app.use('/api/download', downloadRoute); // Download route
 // Root endpoint
 app.get('/', (req, res) => {
   res.send('Welcome to the Slow Comics API!');
