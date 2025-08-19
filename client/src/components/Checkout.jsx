@@ -21,14 +21,15 @@ export const Checkout = () => {
     country: "US",
     phone: ""
   });
+  const UNIT_PRICE = 27;
   const [shippingPrice, setShippingPrice] = useState(null);
   const [currency, setCurrency] = useState("USD");
   const [estimatedDelivery, setEstimatedDelivery] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [subtotal, setSubtotal] = useState(20);
-  const [total, setTotal] = useState(20);
+  const [subtotal, setSubtotal] = useState(UNIT_PRICE);
+  const [total, setTotal] = useState(UNIT_PRICE);
 
   const location = useLocation();
   const history = useHistory();
@@ -39,7 +40,7 @@ export const Checkout = () => {
     const queryQuantity = parseInt(queryParams.get("quantity")) || 1;
     setFormat(queryFormat);
     setQuantity(queryQuantity);
-    setSubtotal(queryQuantity * 20);
+    setSubtotal(queryQuantity * UNIT_PRICE);
   }, [location.search]);
 
   const handleAddressSelect = (selectedPlace) => {
@@ -141,7 +142,7 @@ export const Checkout = () => {
       name: address.name,
       email: address.email,
       quantity,
-      total: format === "digital" ? 20 : total,
+      total: format === "digital" ? UNIT_PRICE : total,
       transactionId: order.id,
       ...(format === "physical" && {
         address: {
@@ -247,7 +248,7 @@ export const Checkout = () => {
             )}
           </>
         ) : (
-          <p><strong>Total:</strong> $20</p>
+          <p><strong>Total:</strong> ${UNIT_PRICE}</p>
         )}
 
 
