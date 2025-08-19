@@ -9,7 +9,7 @@ import back from "../images/back.jpeg";
 export const BuyACopy = () => {
   const [quantity, setQuantity] = useState(1);
   const [format, setFormat] = useState("physical");
-  const pricePerCopy = 20;
+  const pricePerCopy = 27;
   const totalPrice = pricePerCopy * quantity;
 
   const handleQuantityChange = (event) => {
@@ -83,12 +83,11 @@ export const BuyACopy = () => {
           <div className="price-container">
             {format === "physical" ? (
               <div className="price">
-                <span className="original-price">$27</span>
-                <span className="discount-price">${pricePerCopy}</span>
+                <span className="discount-price">$27</span>
               </div>
             ) : (
               <div className="price">
-                <span className="discount-price">$20 (Digital Download)</span>
+                <span className="discount-price">$27 (Digital Download)</span>
               </div>
             )}
           </div>
