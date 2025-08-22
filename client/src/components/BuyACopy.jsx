@@ -33,7 +33,6 @@ export const BuyACopy = () => {
         <div className="details-container">
           <h1 className="title">Slow Comics Presents: Nandi and the Castle in the Sea</h1>
           <p className="description1">368 Page Full Color Graphic Novel</p>
-          <p className="description2">25% off cover price for book launch</p>
 
            {/* Format Selection */}
            <div className="format-container">
