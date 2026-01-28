@@ -121,7 +121,7 @@ export const ComicReader = () => {
         </div>
 
         {/* Show loading indicator */}
-        {loading && <img src={loadingSloth} className="comic-reader-image"/>}
+        {loading && <img src={loadingSloth} alt={`Comic page`} className="comic-reader-image"/>}
         {error && <p className="">Error: {error}</p>}
 
         {/* Display image when loaded */}
