@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import NavBar from "./NavBar";
 import Footer from "./Footer";
 import ImageGallery from "./ImageGallery"; // ✅ your new image component
-import front from "../images/front.jpeg";
-import back from "../images/back.jpeg";
 
 export const BuyACopy = () => {
   const [quantity, setQuantity] = useState(1);

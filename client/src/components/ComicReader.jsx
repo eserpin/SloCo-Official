@@ -9,7 +9,6 @@ export const ComicReader = () => {
   const [imageUrls, setImageUrls] = useState([]); // Array to store all image URLs
   const [imageSrc, setImageSrc] = useState(null); // Current image URL
   const [loading, setLoading] = useState(true);
-  const [loadingImage, setLoadingImage] = useState(false);
 
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);

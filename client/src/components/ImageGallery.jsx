@@ -11,7 +11,7 @@ const photos = [
 
 function ImageGallery() {
   const [currentPhoto, setCurrentPhoto] = useState(0);
-  const [indexAdder, setIndexAdder] = useState(0);
+  const [indexAdder] = useState(0);
 
   const imageClick = () => {
     // Optional: enlarge modal or open zoom view

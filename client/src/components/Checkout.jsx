@@ -23,8 +23,7 @@ export const Checkout = () => {
   });
   const UNIT_PRICE = 27;
   const [shippingPrice, setShippingPrice] = useState(null);
-  const [currency, setCurrency] = useState("USD");
-  const [estimatedDelivery, setEstimatedDelivery] = useState(null);
+  const [currency] = useState("USD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -90,7 +89,6 @@ export const Checkout = () => {
         const total = subtotal + lowestShippingPrice;
 
         setShippingPrice(lowestShippingPrice);
-        setEstimatedDelivery(sortedRates[0].servicelevel.name);
         setTotal(total);
       } else {
         setError("No shipping rates available.");
