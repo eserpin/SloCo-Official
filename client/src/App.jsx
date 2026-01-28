@@ -4,6 +4,7 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import {HomePage} from "./components/HomePage";
 import {BuyACopy} from "./components/BuyACopy";
 import {Checkout} from "./components/Checkout";
+import {Gallery} from "./components/Gallery";
 import {ComicReader} from "./components/ComicReader";
 import {ReaderAuthenticate} from "./components/ReaderAuthenticate";
 import {ThankYou} from "./components/ThankYou";
@@ -19,6 +20,7 @@ const App = () => {
           <Route path="/read" component={ComicReader}/>
           <Route path="/readerAuth" component={ReaderAuthenticate}/>
           <Route path="/thank-you" component={ThankYou}/>
+          <Route path="/gallery" component={Gallery} />
         </Switch>
       </div>
     </Router>

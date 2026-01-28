@@ -32,6 +32,7 @@ const NavBar = () => {
         </li>
         <li><Link to="/buy-a-copy" onClick={closeNav}>Shop</Link></li>
         <li><a href="#contact" onClick={closeNav}>Contact Us</a></li>
+        <li><Link to="/gallery" onClick={closeNav}>Gallery</Link></li>
         <li><Link to="/read" onClick={closeNav}>Read Online</Link></li>
       </ul>
     </nav>
