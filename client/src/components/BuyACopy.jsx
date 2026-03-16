@@ -2,13 +2,15 @@ import React, { useState } from "react";
 import { Link } from 'react-router-dom';
 import NavBar from "./NavBar";
 import Footer from "./Footer";
-import ImageGallery from "./ImageGallery"; // ✅ your new image component
+import ImageGallery from "./ImageGallery";
+import { useCart } from "./CartContext";
+import front from "../images/front.jpeg";
 
 export const BuyACopy = () => {
+  const { cart, addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [format, setFormat] = useState("physical");
-  const pricePerCopy = 27;
-  const totalPrice = pricePerCopy * quantity;
+  const [added, setAdded] = useState(false);
 
   const handleQuantityChange = (event) => {
     setQuantity(parseInt(event.target.value));
@@ -16,8 +18,25 @@ export const BuyACopy = () => {
   const handleFormatChange = (event) => {
     setFormat(event.target.value);
     if (event.target.value === "digital") {
-      setQuantity(1); 
+      setQuantity(1);
     }
+  };
+  const handleAddToCart = () => {
+
+    const product = {
+      id: "nandi-book",
+      name: "Nandi and the Castle in the Sea",
+      price: 27,
+      format,
+      quantity: format === "digital" ? 1 : quantity,
+      requiresShipping: format === "physical",
+      image: front
+    };
+
+    addToCart(product);
+
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
   };
 
   return (
@@ -29,9 +48,25 @@ export const BuyACopy = () => {
 
         {/* Right: Quantity and Price */}
         <div className="details-container">
-          <h1 className="title">Slow Comics Presents: Nandi and the Castle in the Sea</h1>
-          <p className="description1">368 Page Full Color Graphic Novel</p>
+          <div className="details">
+            <h1>Nandi and the Castle in the Sea</h1>
+            <p>
+              <strong>NANDI AND THE CASTLE IN THE SEA</strong> is a 368-page, fully colored fantasy/steampunk graphic novel.
+            </p>
+            <p>
+              It is an alternative fantasy, set on a magical tropical island with a diverse cast, rather than your traditional European fantasy settings and characters.
+            </p>
+            <p>
+              This is a standalone story, so you do not need to purchase further books to get a sense of closure at the end.
+            </p>
+            <p>
+              <strong>NANDI</strong> blends humor, heart, philosophy, and action into one unforgettable journey.
+            </p>
+          </div>
 
+          <div className="format-price-container">
+
+          </div>
            {/* Format Selection */}
            <div className="format-container">
             <label className="format-label">Select Format:</label>
@@ -89,12 +124,14 @@ export const BuyACopy = () => {
             )}
           </div>
 
-        <Link
-          to={`/checkout?quantity=${quantity}&total=${totalPrice}&format=${format}`}
-          className="checkout-button"
-        >
-          Check Out
-        </Link>
+        <button onClick={handleAddToCart} className="checkout-button">
+          {added ? "Added!" : "Add to Cart"}
+        </button>
+        {cart.length > 0 && (
+          <Link to="/cart" className="view-cart-button">
+            View Cart
+          </Link>
+        )}
 
         </div>
       </div>

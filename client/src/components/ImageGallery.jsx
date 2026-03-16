@@ -3,10 +3,16 @@ import { FiArrowLeft, FiArrowRight} from 'react-icons/fi';
 import ImageThumbnails from './ImageThumbnails';
 import front from "../images/front.jpeg";
 import back from "../images/back.jpeg";
+import dragon from "../images/gallery/16.jpeg";
+import castle from "../images/gallery/1.jpeg";
+import timekeeper from "../images/gallery/13.jpeg";
 
 const photos = [
   { url: front, thumbnail_url: front },
   { url: back, thumbnail_url: back },
+  {url: castle, thumbnail_url: castle},
+  {url: timekeeper, thumbnail_url: timekeeper},
+  {url: dragon, thumbnail_url: dragon}
 ];
 
 function ImageGallery() {

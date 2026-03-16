@@ -3,13 +3,26 @@ import { useHistory } from "react-router-dom";
 import axios from "axios";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
-import { useLocation } from "react-router-dom";
+import { useCart } from "./CartContext";
 import AddressForm from "./AddressForm";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import countryCodes from "../assets/countryCodes";
 
 export const Checkout = () => {
-  const [format, setFormat] = useState("physical");
+  const { cart } = useCart();
+
+  const physicalBooks = cart.filter(item => item.id === "nandi-book" && item.requiresShipping);
+  const otherPhysicalItems = cart.filter(
+    item => item.requiresShipping && item.id !== "nandi-book"
+  );
+  function determineFormat(books, otherItems) {
+  if (books.length > 0) return "physical";
+  if (otherItems.length > 0) return "physical-other";
+  return "digital";
+}
+const format = determineFormat(physicalBooks, otherPhysicalItems);
+// const needsShipping = physicalBooks.length > 0 || otherPhysicalItems.length > 0;
+const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0);
   const [address, setAddress] = useState({
     name: "",
     email: "",
@@ -26,21 +39,17 @@ export const Checkout = () => {
   const [currency] = useState("USD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [quantity, setQuantity] = useState(1);
   const [subtotal, setSubtotal] = useState(UNIT_PRICE);
   const [total, setTotal] = useState(UNIT_PRICE);
-
-  const location = useLocation();
   const history = useHistory();
-  console.log(format);
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const queryFormat = queryParams.get("format") || "physical";
-    const queryQuantity = parseInt(queryParams.get("quantity")) || 1;
-    setFormat(queryFormat);
-    setQuantity(queryQuantity);
-    setSubtotal(queryQuantity * UNIT_PRICE);
-  }, [location.search]);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  setSubtotal(subtotal);
+}, [cart]);
 
   const handleAddressSelect = (selectedPlace) => {
     const addressComponents = selectedPlace.address_components;
@@ -72,7 +81,8 @@ export const Checkout = () => {
           ...address,
           street2: address.apartment || "",
         },
-        quantity,
+        bookQuantity
+        //hasPoster
       });
       console.log(address);
 
@@ -139,7 +149,7 @@ export const Checkout = () => {
     const payload = {
       name: address.name,
       email: address.email,
-      quantity,
+      quantity:bookQuantity,
       total: format === "digital" ? UNIT_PRICE : total,
       transactionId: order.id,
       ...(format === "physical" && {
@@ -170,7 +180,7 @@ export const Checkout = () => {
         <div className="checkout-container">
           <h1 className="title">Checkout</h1>
           <p>
-            You are purchasing <strong>{quantity}</strong> copy{quantity > 1 ? "ies" : ""} for a total of{" "}
+            You are purchasing <strong>{bookQuantity}</strong> cop{bookQuantity > 1 ? "ies" : "y"} for a total of{" "}
             <strong>${subtotal}</strong>.
           </p>
 
