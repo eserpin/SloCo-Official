@@ -10,24 +10,6 @@ import {Gallery} from "./components/Gallery";
 import {ComicReader} from "./components/ComicReader";
 import {ReaderAuthenticate} from "./components/ReaderAuthenticate";
 import {ThankYou} from "./components/ThankYou";
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import TagManager from "react-gtm-module";
-
-// const RouteChangeTracker = () => {
-//   const location = useLocation();
-
-//   useEffect(() => {
-//     TagManager.dataLayer({
-//       dataLayer: {
-//         event: "page_view",
-//         page: location.pathname,
-//       },
-//     });
-//   }, [location]);
-
-//   return null;
-// };
 const App = () => {
   return (
     <PayPalScriptProvider options={{ "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID, currency: "USD" }}>

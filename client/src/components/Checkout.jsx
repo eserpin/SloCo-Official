@@ -105,7 +105,7 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
       }
     } catch (error) {
       console.error("Error calculating shipping:", error);
-      setError("There was an error calculating the shipping.");
+      setError("There was an error calculating the shipping. Please make sure your address is correct.");
     } finally {
       setLoading(false);
     }
