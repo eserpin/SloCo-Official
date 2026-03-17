@@ -141,7 +141,18 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
 
   const onApprove = async (data, actions) => {
     const order = await actions.order.capture();
-
+    // window.dataLayer = window.dataLayer || [];
+    // window.dataLayer.push({
+    //   event: "purchase",
+    //   value: total,
+    //   currency: currency,
+    //   transaction_id: order.id,
+    //   items: cart.map(item => ({
+    //     name: item.title,
+    //     price: item.price,
+    //     quantity: item.quantity,
+    //   })),
+    // });
     const endpoint = format === "digital"
       ? "api/placeDigitalOrder"
       : "api/placeOrder";
