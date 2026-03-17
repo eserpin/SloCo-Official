@@ -50,18 +50,14 @@ export const BuyACopy = () => {
         <div className="details-container">
           <div className="details">
             <h1>Nandi and the Castle in the Sea</h1>
-            <p>
-              <strong>NANDI AND THE CASTLE IN THE SEA</strong> is a 368-page, fully colored fantasy/steampunk graphic novel.
-            </p>
-            <p>
-              It is an alternative fantasy, set on a magical tropical island with a diverse cast, rather than your traditional European fantasy settings and characters.
-            </p>
-            <p>
-              This is a standalone story, so you do not need to purchase further books to get a sense of closure at the end.
-            </p>
-            <p>
-              <strong>NANDI</strong> blends humor, heart, philosophy, and action into one unforgettable journey.
-            </p>
+
+            <ul className="product-features">
+              <li>368 Fully Colored Pages</li>
+              <li>Genre: Fantasy & Steampunk</li>
+              <li>Blends humor, heart, philosophy, and action into one unforgettable journey</li>
+              <li>Alternative fantasy with a diverse cast</li>
+              <li>Standalone story; no need for further commitments for closure!</li>
+            </ul>
           </div>
 
           <div className="format-price-container">

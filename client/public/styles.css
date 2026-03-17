@@ -242,6 +242,16 @@
     border-radius: 8px;
     margin-bottom: 25px;
   }
+    .product-features {
+    margin-top: 15px;
+    padding-left: 20px;
+    text-align: left;
+    line-height: 1.5;
+  }
+
+  .product-features li {
+    margin-bottom: 10px;
+  }
   /*
   Image Carousel
   */
@@ -263,6 +273,8 @@
     align-items: center; /* center thumbnails horizontally */
     height: 100%;
     padding: 10px;
+    overflow-y: auto;        /* vertical scroll if needed */
+    scrollbar-width: thin;   /* Firefox thinner scrollbar */
   }
 
   .carousel-thumbnails {
@@ -299,6 +311,8 @@
     .thumbnail-column {
       flex-direction: row; /* Thumbnails in a horizontal row */
       justify-content: center; /* Center the thumbnails */
+      overflow-y: hidden;
+      overflow-x: auto;
       padding: 0; /* Remove extra padding */
       width: 100%;
       order: 1; /* Ensure thumbnails are at the bottom (after image) */
@@ -316,7 +330,15 @@
       height: 60px;
       margin: 0 8px; /* Add space between thumbnails */
     }
+      /* Optional: hide scrollbar in Webkit browsers */
+    .thumbnail-column::-webkit-scrollbar {
+      height: 6px;
+    }
 
+    .thumbnail-column::-webkit-scrollbar-thumb {
+      background-color: rgba(0,0,0,0.3);
+      border-radius: 3px;
+    }
     /* Make the image fit to container width on mobile */
     .carousel-photo {
       width: 100%; /* Take full width of the container */
@@ -930,11 +952,16 @@
   width: 30px;
   height: 30px;
   background-color: var(--waikawa-gray);
+  font-size: 1.2rem;
   color: var(--wafer);
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
 }
 
 .item-quantity button:disabled {
