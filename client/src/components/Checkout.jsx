@@ -43,6 +43,12 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
   const [total, setTotal] = useState(UNIT_PRICE);
   const history = useHistory();
   useEffect(() => {
+    if (!cart || cart.length === 0) {
+      history.replace("/buy-a-copy");
+    }
+  }, [cart, history]);
+
+  useEffect(() => {
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
