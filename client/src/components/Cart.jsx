@@ -84,7 +84,26 @@ export const Cart = () => {
                 <span>${subtotal.toFixed(2)}</span>
               </div>
 
-              <Link to="/checkout" className="checkout-button">
+              <Link
+                to="/checkout"
+                className="checkout-button"
+                onClick={() => {
+                  console.log("checking out")
+                  window.dataLayer = window.dataLayer || [];
+                  window.dataLayer.push({
+                    event: "begin_checkout",
+                    ecommerce: {
+                      value: cart.reduce((sum, item) => sum + item.price * item.quantity, 0), // total value
+                      items: cart.map(item => ({
+                        item_name: item.name,
+                        item_id: item.id,
+                        price: item.price,
+                        quantity: item.quantity,
+                      })),
+                    },
+                  });
+                }}
+              >
                 Proceed to Checkout
               </Link>
             </div>

@@ -5,13 +5,20 @@ import Footer from "./Footer";
 import ImageGallery from "./ImageGallery";
 import { useCart } from "./CartContext";
 import front from "../images/front.jpeg";
+import {useEffect} from "react";
 
 export const BuyACopy = () => {
   const { cart, addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [format, setFormat] = useState("physical");
   const [added, setAdded] = useState(false);
-
+  useEffect(() => {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "view_buy_page",
+      page: "buy",
+    });
+  }, []);
   const handleQuantityChange = (event) => {
     setQuantity(parseInt(event.target.value));
   };
@@ -37,6 +44,22 @@ export const BuyACopy = () => {
 
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
+    console.log("add to cart event")
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "add_to_cart",
+      ecommerce: {
+        value: product.price * product.quantity,
+        items: [
+          {
+            item_name: product.name,
+            item_id: product.id,
+            price: product.price,
+            quantity: product.quantity,
+          },
+        ],
+      },
+    });
   };
 
   return (
