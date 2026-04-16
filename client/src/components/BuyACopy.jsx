@@ -75,11 +75,12 @@ export const BuyACopy = () => {
             <h1>Nandi and the Castle in the Sea</h1>
 
             <ul className="product-features">
-              <li>368 Fully Colored Pages</li>
-              <li>Genre: Fantasy & Steampunk</li>
-              <li>Blends humor, heart, philosophy, and action into one unforgettable journey</li>
-              <li>Alternative fantasy with a diverse cast</li>
-              <li>Standalone story; no need for further commitments for closure!</li>
+              <li>368 pages. Every single one in full color.</li>
+              <li>Fantasy and steampunk. A world you haven't encountered before.</li>
+              <li>A young boy, a stolen power, an island holding its breath for 30 years, and a Castle in the Sea that won't stop calling his name.</li>
+              <li>Humor, heart, philosophy, and action.</li>
+              <li>A cast as diverse as the world itself.</li>
+              <li>A complete story. It begins, builds, and ends right here. No cliffhangers.</li>
             </ul>
           </div>
 
