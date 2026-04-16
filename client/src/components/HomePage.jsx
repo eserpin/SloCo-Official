@@ -16,8 +16,18 @@ export const HomePage = () => {
       <section id="about" class="home-page-section">
         <h2>About Us</h2>
         <p>
-        We are a small comic book publishing company who pride ourselves on quality stories that have themes of nature at their core. Our debut graphic novel, titled “Nandi and the Castle in the Sea,” is out now! We have been hard at work on bringing this story to life for 5 years now, and we can’t wait for you to read it.
+        The best stories aren’t just read, they are experienced; in crashing waves, in ancient forests, and in a world of magic, whimsy, and wonder. 
         </p>
+        <p>
+        We're an indie comic publisher, and what drives everything we make is a simple belief: Nature is the most powerful backdrop a story can have. 
+        </p>
+        <p>
+        The sea, the islands, the strange and specific rhythms of the Earth and it's inhabitants. That's where our stories are born.
+        </p>
+        <p>
+        After nearly 10 years of writing, illustrating, and getting every panel just right, our debut graphic novel is finally out.
+        </p>
+        
       </section>
       <section id="natcits" class="home-page-section">
       <h2>Nandi and the Castle in the Sea</h2>
