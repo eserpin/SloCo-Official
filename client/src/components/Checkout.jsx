@@ -167,18 +167,24 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
 
     await axios.post(`${process.env.REACT_APP_API_URL}${endpoint}`, payload);
 
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      event: "purchase",
-      value: total,
-      currency: currency,
-      transaction_id: order.id,
-      items: cart.map(item => ({
-        name: item.name,
-        price: item.price.toFixed(2),
-        quantity: item.quantity,
-      })),
-    });
+   const purchaseValue = format === "digital" ? UNIT_PRICE : total;
+
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  event: "purchase",
+  ecommerce: {
+    transaction_id: order.id,
+    value: total,
+    currency: currency,
+    shipping: shippingPrice || 0,
+    items: cart.map(item => ({
+      item_id: item.id,
+      item_name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    })),
+  },
+});
     if (format === "digital") {
       alert(
         "✅ Payment successful! A download link has been sent to your email.\n\n📥 The link is valid for 48 hours and can be used up to 3 times."
