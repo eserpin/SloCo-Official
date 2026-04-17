@@ -167,7 +167,6 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
 
     await axios.post(`${process.env.REACT_APP_API_URL}${endpoint}`, payload);
 
-   const purchaseValue = format === "digital" ? UNIT_PRICE : total;
 
 window.dataLayer = window.dataLayer || [];
 window.dataLayer.push({
