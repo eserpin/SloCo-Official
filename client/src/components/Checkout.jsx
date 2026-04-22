@@ -13,7 +13,7 @@ export const Checkout = () => {
 
   const physicalBooks = cart.filter(item => item.id === "nandi-book" && item.requiresShipping);
   const stickersBookmarks = cart.filter(item => item.requiresShipping && item.id !== "nandi-book" && item.type !== "Print");
-  const prints = cart.filter(item => item.requiresShipping && item.type === "Print");
+  const prints = cart.filter(item => item.type === "Print");
   function determineFormat(books, stickersBookmarks, prints) {
   if (books.length > 0) return "physical";
   if (stickersBookmarks.length > 0 || prints.length > 0) return "physical-other";
