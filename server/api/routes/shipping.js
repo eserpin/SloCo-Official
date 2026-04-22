@@ -258,23 +258,41 @@ router.post('/', async (req, res) => {
       cheapestRates.push(cheapest);
     }
 
-    // =========================================================
-    // 💸 TOTAL SHIPPING LOGIC
-    // =========================================================
-    let totalShipping = 0;
+let totalShipping = 0;
+let shippingBreakdown = [];
 
-    if (!isInternational) {
-      // waive extra shipments → only first matters
-      totalShipping = parseFloat(cheapestRates[0].amount);
-    } else {
-      // sum all shipments
-      totalShipping = cheapestRates.reduce(
-        (sum, r) => sum + parseFloat(r.amount),
-        0
-      );
-    }
+if (!isInternational) {
 
-    return res.status(200).json({ totalShipping });
+  const highestRate = cheapestRates.reduce((max, r) =>
+    parseFloat(r.amount) > parseFloat(max.amount) ? r : max
+  );
+
+  totalShipping = parseFloat(highestRate.amount);
+
+  shippingBreakdown = cheapestRates.map(r => ({
+    amount: parseFloat(r.amount),
+    included: r.amount === highestRate.amount,
+  }));
+
+} else {
+  // 🌍 INTERNATIONAL
+  // return all shipment costs (no waiving)
+
+  shippingBreakdown = cheapestRates.map(r => ({
+    amount: parseFloat(r.amount),
+  }));
+
+  totalShipping = shippingBreakdown.reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
+}
+
+    return res.status(200).json({
+      totalShipping,
+      shippingBreakdown,
+      shipmentCount: cheapestRates.length
+    });
 
   } catch (error) {
     console.error('❌ Shipping error:', error?.response?.body || error);

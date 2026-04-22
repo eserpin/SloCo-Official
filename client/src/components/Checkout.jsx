@@ -97,6 +97,16 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
       console.log(address);
 
       if (response.data && response.data.totalShipping !== undefined) {
+
+        console.log("📊 Breakdown:");
+        console.log(response.data.shippingBreakdown);
+
+        console.log("📦 Shipment count:");
+        console.log(response.data.shipmentCount);
+
+        console.log("💰 Total shipping:");
+        console.log(response.data.totalShipping);
+
         const lowestShippingPrice = response.data.totalShipping;
 
         const total = subtotal + lowestShippingPrice;
