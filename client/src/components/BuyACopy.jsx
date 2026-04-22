@@ -1,50 +1,63 @@
-import React, { useState } from "react";
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
 import ImageGallery from "./ImageGallery";
 import { useCart } from "./CartContext";
-import front from "../images/front.jpeg";
-import {useEffect} from "react";
+import { products } from "../assets/productInfo";
 
-export const BuyACopy = () => {
+const BuyProduct = () => {
+  const { productId } = useParams();
+  const productData = products.find(p => p.id === productId);
+
   const { cart, addToCart } = useCart();
+
   const [quantity, setQuantity] = useState(1);
-  const [format, setFormat] = useState("physical");
+  const [format, setFormat] = useState(
+    productData?.formats?.includes("physical")
+      ? "physical"
+      : productData?.formats?.[0] || "physical"
+  );
   const [added, setAdded] = useState(false);
+
   useEffect(() => {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: "view_buy_page",
-      page: "buy",
+      page: productId,
     });
-  }, []);
+  }, [productId]);
+
+  if (!productData) return <div>Product not found</div>;
+
   const handleQuantityChange = (event) => {
     setQuantity(parseInt(event.target.value));
   };
+
   const handleFormatChange = (event) => {
     setFormat(event.target.value);
+
     if (event.target.value === "digital") {
       setQuantity(1);
     }
   };
-  const handleAddToCart = () => {
 
+  const handleAddToCart = () => {
     const product = {
-      id: "nandi-book",
-      name: "Nandi and the Castle in the Sea",
-      price: 27,
+      id: productData.id,
+      name: productData.name,
+      price: productData.price,
       format,
       quantity: format === "digital" ? 1 : quantity,
       requiresShipping: format === "physical",
-      image: front
+      image: productData.image || productData.images?.[0]?.url
     };
 
     addToCart(product);
 
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
-    console.log("add to cart event")
+
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: "add_to_cart",
@@ -64,65 +77,75 @@ export const BuyACopy = () => {
 
   return (
     <div>
-      <NavBar/>
-      <div className="buy-container">
-        {/* Left: Image Carousel */}
-        <ImageGallery/>
+      <NavBar />
 
-        {/* Right: Quantity and Price */}
+      <div className="buy-container">
+
+        {/* Left: Image Carousel */}
+        <ImageGallery photos={productData.images} />
+
+        {/* Right: Details */}
         <div className="details-container">
+
           <div className="details">
-            <h1>Nandi and the Castle in the Sea</h1>
+            <h1>{productData.name}</h1>
 
             <ul className="product-features">
-              <li>368 pages. Every single one in full color.</li>
-              <li>Fantasy and steampunk. A world you haven't encountered before.</li>
-              <li>A young boy, a stolen power, an island holding its breath for 30 years, and a Castle in the Sea that won't stop calling his name.</li>
-              <li>Humor, heart, philosophy, and action.</li>
-              <li>A cast as diverse as the world itself.</li>
-              <li>A complete story. It begins, builds, and ends right here. No cliffhangers.</li>
+              {productData.description?.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
             </ul>
           </div>
 
-          <div className="format-price-container">
+          <div className="format-price-container" />
 
-          </div>
-           {/* Format Selection */}
-           <div className="format-container">
+          {/* Format Selection */}
+          <div className="format-container">
             <label className="format-label">Select Format:</label>
+
             <div className="format-options">
-              <label>
-                <input
-                  type="radio"
-                  value="physical"
-                  checked={format === "physical"}
-                  onChange={handleFormatChange}
-                />
-                Physical Copy
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  value="digital"
-                  checked={format === "digital"}
-                  onChange={handleFormatChange}
-                />
-                Digital Copy (Download)
-              </label>
+
+              {productData.formats?.includes("physical") && (
+                <label>
+                  <input
+                    type="radio"
+                    value="physical"
+                    checked={format === "physical"}
+                    onChange={handleFormatChange}
+                  />
+                  Physical Copy
+                </label>
+              )}
+
+              {productData.formats?.includes("digital") && (
+                <label>
+                  <input
+                    type="radio"
+                    value="digital"
+                    checked={format === "digital"}
+                    onChange={handleFormatChange}
+                  />
+                  Digital Copy (Download)
+                </label>
+              )}
+
             </div>
           </div>
 
-          {/* Quantity Selector only for physical */}
-          {format === "physical" && (
+          {/* Quantity Selector */}
+          {format !== "digital" && (
             <div className="quantity-container">
-              <label htmlFor="quantity" className="quantity-label">Quantity</label>
+              <label htmlFor="quantity" className="quantity-label">
+                Quantity
+              </label>
+
               <select
                 id="quantity"
                 value={quantity}
                 onChange={handleQuantityChange}
                 className="quantity-select"
               >
-                {[...Array(4).keys()].map((num) => (
+                {[...Array(5).keys()].map((num) => (
                   <option key={num + 1} value={num + 1}>
                     {num + 1}
                   </option>
@@ -135,29 +158,35 @@ export const BuyACopy = () => {
           <div className="price-container">
             {format === "physical" ? (
               <div className="price">
-                <span className="discount-price">$27</span>
+                <span className="discount-price">
+                  ${productData.price}
+                </span>
               </div>
             ) : (
               <div className="price">
-                <span className="discount-price">$27 (Digital Download)</span>
+                <span className="discount-price">
+                  ${productData.price} (Digital Download)
+                </span>
               </div>
             )}
           </div>
 
-        <button onClick={handleAddToCart} className="checkout-button">
-          {added ? "Added!" : "Add to Cart"}
-        </button>
-        {cart.length > 0 && (
-          <Link to="/cart" className="view-cart-button">
-            View Cart
-          </Link>
-        )}
+          <button onClick={handleAddToCart} className="checkout-button">
+            {added ? "Added!" : "Add to Cart"}
+          </button>
+
+          {cart.length > 0 && (
+            <Link to="/cart" className="view-cart-button">
+              View Cart
+            </Link>
+          )}
 
         </div>
       </div>
-      <Footer/>
+
+      <Footer />
     </div>
   );
 };
 
-export default BuyACopy;
+export default BuyProduct;

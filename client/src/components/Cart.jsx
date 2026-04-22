@@ -27,7 +27,7 @@ export const Cart = () => {
         {cart.length === 0 && (
           <div className="empty-cart">
             <p>Your cart is empty.</p>
-            <Link to="/buy-a-copy" className="continue-shopping">
+            <Link to="/products" className="continue-shopping">
               Continue Shopping
             </Link>
           </div>
@@ -50,14 +50,14 @@ export const Cart = () => {
                   <div className="item-info">
                     <h3>{item.name}</h3>
                     <p className="item-format">
-                      {item.format.charAt(0).toUpperCase() + item.format.slice(1)}
+                      {item.format ? item.format.charAt(0).toUpperCase() + item.format.slice(1) : "Physical"}
                     </p>
                   </div>
 
                   <div className="item-quantity">
                     <button onClick={() => updateQuantity(index, item.quantity - 1)} disabled={item.quantity <= 1}>-</button>
                     <span>{item.quantity}</span>
-                    <button onClick={() => updateQuantity(index, item.quantity + 1)}>+</button>
+                    <button onClick={() => updateQuantity(index, item.quantity + 1)} disabled={item.quantity >= 5}>+</button>
                   </div>
 
                   <div className="item-price">

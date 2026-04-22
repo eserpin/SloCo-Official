@@ -12,17 +12,18 @@ export const Checkout = () => {
   const { cart } = useCart();
 
   const physicalBooks = cart.filter(item => item.id === "nandi-book" && item.requiresShipping);
-  const otherPhysicalItems = cart.filter(
-    item => item.requiresShipping && item.id !== "nandi-book"
-  );
-  function determineFormat(books, otherItems) {
+  const stickersBookmarks = cart.filter(item => item.requiresShipping && item.id !== "nandi-book" && item.type !== "Print");
+  const prints = cart.filter(item => item.requiresShipping && item.type === "Print");
+  function determineFormat(books, stickersBookmarks, prints) {
   if (books.length > 0) return "physical";
-  if (otherItems.length > 0) return "physical-other";
+  if (stickersBookmarks.length > 0 || prints.length > 0) return "physical-other";
   return "digital";
 }
-const format = determineFormat(physicalBooks, otherPhysicalItems);
+const format = determineFormat(physicalBooks, stickersBookmarks, prints);
 // const needsShipping = physicalBooks.length > 0 || otherPhysicalItems.length > 0;
 const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0);
+const otherPhysicalQuantity = stickersBookmarks.reduce((sum, item) => sum + item.quantity, 0);
+const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
   const [address, setAddress] = useState({
     name: "",
     email: "",
@@ -87,20 +88,15 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
           ...address,
           street2: address.apartment || "",
         },
-        bookQuantity
-        //hasPoster
+        bookQuantity,
+        otherPhysicalQuantity,
+        printQuantity,
+        isInternational: address.country !== "US"
       });
       console.log(address);
 
-      if (response.data && response.data.length > 0) {
-        const sortedRates = response.data
-          .map(rate => ({
-            ...rate,
-            amount: parseFloat(rate.amount),
-          }))
-          .sort((a, b) => a.amount - b.amount);
-
-        const lowestShippingPrice = sortedRates[0].amount;
+      if (response.data && response.data.totalShipping !== undefined) {
+        const lowestShippingPrice = response.data.totalShipping;
 
         const total = subtotal + lowestShippingPrice;
 
@@ -154,9 +150,19 @@ const bookQuantity = physicalBooks.reduce((sum, item) => sum + item.quantity, 0)
     const payload = {
       name: address.name,
       email: address.email,
-      quantity:bookQuantity,
+      bookQuantity,
+      otherPhysicalQuantity,
+      printQuantity,
+      isInternational: address.country !== "US",
       total: format === "digital" ? UNIT_PRICE : total,
+      shippingPrice: format === "physical" ? shippingPrice : 0,
       transactionId: order.id,
+      cartItems: cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
       ...(format === "physical" && {
         address: {
           ...address,
@@ -201,10 +207,15 @@ window.dataLayer.push({
         <NavBar />
         <div className="checkout-container">
           <h1 className="title">Checkout</h1>
-          <p>
-            You are purchasing <strong>{bookQuantity}</strong> cop{bookQuantity > 1 ? "ies" : "y"} for a total of{" "}
-            <strong>${subtotal}</strong>.
-          </p>
+          <div className="cart-summary">
+            <h2>Order Summary</h2>
+            {cart.map((item, index) => (
+              <div key={index} className="cart-item">
+                <p>{item.name} x {item.quantity} - ${item.price * item.quantity}</p>
+              </div>
+            ))}
+            <p><strong>Subtotal: ${subtotal}</strong></p>
+          </div>
 
           {/* Name and Email Form - Always Required */}
           <div className="address-form">

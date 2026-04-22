@@ -8,95 +8,193 @@ const router = express.Router();
 
 // Place Order Route
 router.post('/', async (req, res) => {
-  const { name, email, quantity, total, transactionId, address } = req.body;
+  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice } = req.body;
 
-  if (!name || !email || !quantity || !total || !transactionId || !address) {
+  if (!name || !email || !total || !transactionId) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  let lengthP = "10", widthP = "7.5", heightP = "1";
-  if (quantity >= 2 && quantity <= 4) {
-    lengthP = "9"; // Adjusted for multiple books
-    widthP = "9";
-    heightP = "5"; // Adjusted height
-  }
-
-  const customsItem = {
-    description: "Graphic Novel",
-    quantity: quantity,
-    netWeight: (1.6 * quantity).toFixed(2), // Dynamically calculated weight
-    massUnit: "lb",
-    valueAmount: (20 * quantity).toFixed(2), // Dynamically calculated value
-    valueCurrency: "USD",
-    originCountry: "US",
-  };
+  const shipments = [];
+  const customsDeclarations = [];
+  const labelUrls = [];
 
   try {
-    // Step 1: Create a customs declaration
-    const customsDeclaration = await shippo.customsDeclarations.create({
-      contentsType: "MERCHANDISE",
-      contentsExplanation: "Graphic Novel",
-      nonDeliveryOption: "RETURN",
-      certify: true,
-      certifySigner: "Anil Serpin",
-      items: [customsItem],
-    });
-    console.log("Customs declaration created:", customsDeclaration);
+    // Books shipment
+    if (bookQuantity > 0) {
+      const weight = (1.6 * bookQuantity).toFixed(2);
+      let lengthP = "10", widthP = "7.5", heightP = "1";
+      if (bookQuantity >= 2 && bookQuantity <= 4) {
+        lengthP = "9";
+        widthP = "9";
+        heightP = "5";
+      }
 
-    // Step 2: Create the shipment
-
-    const shipment = await shippo.shipments.create({
-      addressFrom: addressFrom,
-      addressTo: address,
-      parcels: [{
-        weight: (1.6 * quantity).toString(),
+      const parcel = {
+        weight: weight,
         length: lengthP,
         width: widthP,
         height: heightP,
         massUnit: "lb",
         distanceUnit: "in",
-      }],
-      customsDeclaration: customsDeclaration.objectId,
-    });
+      };
 
-    // Check for errors in shipment creation
-    if (shipment.error) {
-      return res.status(400).json({ error: shipment.error.message });
+      let customsDeclaration = null;
+      if (isInternational) {
+        customsDeclaration = await shippo.customsDeclarations.create({
+          contentsType: "MERCHANDISE",
+          contentsExplanation: "Graphic Novel",
+          nonDeliveryOption: "RETURN",
+          certify: true,
+          certifySigner: "Anil Serpin",
+          items: [{
+            description: "Graphic Novel",
+            quantity: bookQuantity,
+            netWeight: weight,
+            massUnit: "lb",
+            valueAmount: (20 * bookQuantity).toFixed(2),
+            valueCurrency: "USD",
+            originCountry: "US",
+          }],
+        });
+        customsDeclarations.push(customsDeclaration);
+      }
+
+      const shipment = await shippo.shipments.create({
+        addressFrom,
+        addressTo: address,
+        parcels: [parcel],
+        ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
+      });
+
+      if (shipment.error) {
+        return res.status(400).json({ error: shipment.error.message });
+      }
+      shipments.push(shipment);
     }
-    console.log('✅ Shipment created successfully');
 
-    // Step 3: Select the cheapest rate (UPS/USPS)
-    const filteredRates = shipment.rates.filter(rate => rate.provider === 'UPS' || rate.provider === 'USPS');
-    if (filteredRates.length === 0) {
-      return res.status(400).json({ error: 'No valid UPS or USPS rates found' });
+    // Stickers/bookmarks shipment if no books
+    else if (otherPhysicalQuantity > 0) {
+      const parcel = {
+        weight: "0.5",
+        length: "6.5",
+        width: "4.5",
+        height: "1",
+        massUnit: "lb",
+        distanceUnit: "in",
+      };
+
+      let customsDeclaration = null;
+      if (isInternational) {
+        customsDeclaration = await shippo.customsDeclarations.create({
+          contentsType: "MERCHANDISE",
+          contentsExplanation: "Stickers and Bookmarks",
+          nonDeliveryOption: "RETURN",
+          certify: true,
+          certifySigner: "Anil Serpin",
+          items: [{
+            description: "Stickers and Bookmarks",
+            quantity: otherPhysicalQuantity,
+            netWeight: "0.5",
+            massUnit: "lb",
+            valueAmount: "10.00",
+            valueCurrency: "USD",
+            originCountry: "US",
+          }],
+        });
+        customsDeclarations.push(customsDeclaration);
+      }
+
+      const shipment = await shippo.shipments.create({
+        addressFrom,
+        addressTo: address,
+        parcels: [parcel],
+        ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
+      });
+
+      if (shipment.error) {
+        return res.status(400).json({ error: shipment.error.message });
+      }
+      shipments.push(shipment);
     }
 
-    const cheapestRate = filteredRates.reduce((minRate, currentRate) => {
-      return parseFloat(currentRate.amount) < parseFloat(minRate.amount) ? currentRate : minRate;
-    });
+    // Prints shipments
+    if (printQuantity > 0) {
+      const numShipments = Math.ceil(printQuantity / 2);
+      for (let i = 0; i < numShipments; i++) {
+        const parcel = {
+          weight: "1",
+          length: "20",
+          width: "4",
+          height: "4",
+          massUnit: "lb",
+          distanceUnit: "in",
+        };
 
-    console.log('✅ Cheapest rate selected:', cheapestRate);
+        let customsDeclaration = null;
+        if (isInternational) {
+          customsDeclaration = await shippo.customsDeclarations.create({
+            contentsType: "MERCHANDISE",
+            contentsExplanation: "Prints",
+            nonDeliveryOption: "RETURN",
+            certify: true,
+            certifySigner: "Anil Serpin",
+            items: [{
+              description: "Prints",
+              quantity: Math.min(2, printQuantity - i * 2),
+              netWeight: "1",
+              massUnit: "lb",
+              valueAmount: "15.00",
+              valueCurrency: "USD",
+              originCountry: "US",
+            }],
+          });
+          customsDeclarations.push(customsDeclaration);
+        }
 
-    // Step 4: Create a transaction (shipping label)
-    const transaction = await shippo.transactions.create({
-      async: false,
-      labelFileType: "PDF_4x6",
-      metadata: `Order ID #${transactionId}`,
-      rate: cheapestRate.objectId,
-    });
+        const shipment = await shippo.shipments.create({
+          addressFrom,
+          addressTo: address,
+          parcels: [parcel],
+          ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
+        });
 
-    // Check for errors in transaction creation
-    if (transaction.error) {
-      return res.status(400).json({ error: transaction.error.message });
+        if (shipment.error) {
+          return res.status(400).json({ error: shipment.error.message });
+        }
+        shipments.push(shipment);
+      }
     }
-    console.log('✅ Transaction created successfully:', transaction);
 
-    // Step 5: Save order to the database
+    // Create transactions for each shipment
+    for (const shipment of shipments) {
+      const filteredRates = shipment.rates.filter(rate => rate.provider === 'UPS' || rate.provider === 'USPS');
+      if (filteredRates.length === 0) {
+        return res.status(400).json({ error: 'No valid UPS or USPS rates found' });
+      }
+      const cheapestRate = filteredRates.reduce((minRate, currentRate) => {
+        return parseFloat(currentRate.amount) < parseFloat(minRate.amount) ? currentRate : minRate;
+      });
+
+      const transaction = await shippo.transactions.create({
+        async: false,
+        labelFileType: "PDF_4x6",
+        metadata: `Order ID #${transactionId}`,
+        rate: cheapestRate.objectId,
+      });
+
+      if (transaction.error) {
+        return res.status(400).json({ error: transaction.error.message });
+      }
+      console.log('✅ Transaction created successfully:', transaction);
+      labelUrls.push(transaction.labelUrl);
+    }
+
+    // Save order to the database
     const query = `
       INSERT INTO orders (transaction_id, name, email, quantity)
       VALUES ($1, $2, $3, $4) RETURNING *;
     `;
-    const values = [transactionId, name, email, quantity];
+    const values = [transactionId, name, email, bookQuantity];
 
     const { rows } = await pool.query(query, values);
     if (rows.length === 0) {
@@ -104,19 +202,24 @@ router.post('/', async (req, res) => {
     }
     console.log('✅ Order saved to database:', rows[0]);
 
-    // Step 6: Send the shipping label to the admin email
+    const cartSummary = (cartItems && cartItems.length)
+      ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
+      : `Books: ${bookQuantity}\nStickers/Bookmarks: ${otherPhysicalQuantity}\nPrints: ${printQuantity}`;
+
+    const adminText = `New order received!\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\n\nShipping Address:\n${address?.street1 || ''}${address?.apartment ? '\n' + address.apartment : ''}\n${address?.city || ''}, ${address?.state || ''} ${address?.postal_code || address?.zip || ''}\n${address?.country || ''}\nPhone: ${address?.phone || 'N/A'}\n\nPurchase Details:\n${cartSummary}\n\nShipping Price: $${shippingPrice !== undefined && shippingPrice !== null ? Number(shippingPrice).toFixed(2) : '0.00'}\nTotal Charged: $${Number(total).toFixed(2)}\n\nShipping Labels: ${labelUrls.join(', ')}`;
+
     const mailOptionsAdmin = {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',
-      subject: `Shipping Label for Order #${transactionId}`,
-      text: `Please find the attached shipping label for your order: ${transaction.labelUrl}`,
+      subject: `Order Received #${transactionId}`,
+      text: adminText,
     };
 
     // Send email to the admin
     await transporter.sendMail(mailOptionsAdmin);
     console.log('✅ Admin email sent successfully');
 
-    // Step 7: Send a confirmation email to the customer
+    // Send a confirmation email to the customer
     const mailOptionsCustomer = {
       from: process.env.GMAIL_USER,
       to: email,
@@ -128,10 +231,9 @@ router.post('/', async (req, res) => {
     await transporter.sendMail(mailOptionsCustomer);
     console.log('✅ Confirmation email sent to customer');
 
-    // Step 8: Respond with shipment ID and success message
+    // Respond with success message
     res.status(200).json({
-      message: 'Order placed successfully! Label created, emailed, and order saved.',
-      shipment_id: shipment.objectId,
+      message: 'Order placed successfully! Labels created, emailed, and order saved.',
     });
 
   } catch (error) {

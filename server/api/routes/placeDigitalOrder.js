@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
-  const { name, email, transactionId } = req.body;
+  const { name, email, transactionId, cartItems } = req.body;
 
   if (!name || !email || !transactionId) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -40,6 +40,17 @@ router.post('/', async (req, res) => {
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
       text: `Thank you for your purchase! This link is valid for 3 downloads and expires in 48 hours.\n\nDownload your book here:\n${downloadLink}\n\n`,
+    });
+
+    const cartSummary = (cartItems && cartItems.length)
+      ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
+      : 'No itemized cart details were sent.';
+
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: 'slow.comics.publishing@gmail.com',
+      subject: `Digital Order Received #${transactionId}`,
+      text: `New digital order received!\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nDownload link sent to customer: ${downloadLink}`,
     });
 
     res.status(200).json({

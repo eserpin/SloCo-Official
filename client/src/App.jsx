@@ -1,10 +1,11 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { CartProvider } from "./components/CartContext";
 import {Cart} from "./components/Cart";
 import {HomePage} from "./components/HomePage";
-import {BuyACopy} from "./components/BuyACopy";
+import BuyACopy from "./components/BuyACopy";
+import ProductList from "./components/ProductList";
 import {Checkout} from "./components/Checkout";
 import {Gallery} from "./components/Gallery";
 import {ComicReader} from "./components/ComicReader";
@@ -19,7 +20,9 @@ const App = () => {
       <div>
         <Switch>
           <Route path="/" exact component={HomePage} />
-          <Route path="/buy-a-copy" component={BuyACopy} />
+          <Route exact path="/buy" render={() => <Redirect to="/buy/nandi-book" />} />
+          <Route path="/buy/:productId" component={BuyACopy} />
+          <Route path="/products" component={ProductList} />
           <Route path="/cart" component={Cart} />
           <Route path="/checkout" component={Checkout} />
           <Route path="/read" component={ComicReader}/>
