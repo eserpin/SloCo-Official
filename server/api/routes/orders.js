@@ -6,9 +6,18 @@ const transporter = require('../config/mailer'); // Import the email transporter
 
 const router = express.Router();
 
+const normalizeAddress = (address) => {
+  const normalized = { ...address };
+  if (!normalized.zip && normalized.postal_code) normalized.zip = normalized.postal_code;
+  if (!normalized.postal_code && normalized.zip) normalized.postal_code = normalized.zip;
+  if (!normalized.country && normalized.country_code) normalized.country = normalized.country_code;
+  return normalized;
+};
+
 // Place Order Route
 router.post('/', async (req, res) => {
   const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice } = req.body;
+  const normalizedAddress = address ? normalizeAddress(address) : null;
 
   if (!name || !email || !total || !transactionId) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -78,7 +87,7 @@ router.post('/', async (req, res) => {
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo: { ...address, name },
+        addressTo: { ...normalizedAddress, name },
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -124,7 +133,7 @@ router.post('/', async (req, res) => {
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo: address,
+        addressTo: { ...normalizedAddress, name },
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -171,7 +180,7 @@ router.post('/', async (req, res) => {
 
         const shipment = await shippo.shipments.create({
           addressFrom,
-          addressTo: address,
+          addressTo: { ...normalizedAddress, name },
           parcels: [parcel],
           ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
         });

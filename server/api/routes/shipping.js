@@ -3,8 +3,17 @@ const { shippo, addressFrom } = require('../config/shippo'); // Import the Shipp
 
 const router = express.Router();
 
+const normalizeAddress = (address) => {
+  const normalized = { ...address };
+  if (!normalized.zip && normalized.postal_code) normalized.zip = normalized.postal_code;
+  if (!normalized.postal_code && normalized.zip) normalized.postal_code = normalized.zip;
+  if (!normalized.country && normalized.country_code) normalized.country = normalized.country_code;
+  return normalized;
+};
+
 router.post('/', async (req, res) => {
   const { addressTo, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational } = req.body;
+  const normalizedAddressTo = addressTo ? normalizeAddress(addressTo) : null;
   console.log(JSON.stringify(req.body, null, 2));
 
   // Validate the required 'addressTo' field
@@ -75,7 +84,7 @@ router.post('/', async (req, res) => {
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo,
+        addressTo: { ...normalizedAddressTo, name: normalizedAddressTo.name || 'Customer' },
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -84,6 +93,12 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: shipment.error.message });
       }
       shipments.push(shipment);
+      console.log(`✅ Shipment created [book]:`, {
+        parcel,
+        ratesCount: shipment.rates?.length,
+        providers: shipment.rates?.map(r => r.provider),
+        objectId: shipment.objectId,
+      });
     }
 
     // Stickers/bookmarks shipment if no books
@@ -121,7 +136,7 @@ router.post('/', async (req, res) => {
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo,
+        addressTo: { ...normalizedAddressTo, name: normalizedAddressTo.name || 'Customer' },
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -130,6 +145,12 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: shipment.error.message });
       }
       shipments.push(shipment);
+      console.log(`✅ Shipment created [stickers-only]:`, {
+        parcel,
+        ratesCount: shipment.rates?.length,
+        providers: shipment.rates?.map(r => r.provider),
+        objectId: shipment.objectId,
+      });
     }
 
     // Prints shipments
@@ -168,7 +189,7 @@ router.post('/', async (req, res) => {
 
         const shipment = await shippo.shipments.create({
           addressFrom,
-          addressTo,
+          addressTo: { ...normalizedAddressTo, name: normalizedAddressTo.name || 'Customer' },
           parcels: [parcel],
           ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
         });
@@ -177,6 +198,12 @@ router.post('/', async (req, res) => {
           return res.status(400).json({ error: shipment.error.message });
         }
         shipments.push(shipment);
+        console.log(`✅ Shipment created [print ${i}]:`, {
+          parcel,
+          ratesCount: shipment.rates?.length,
+          providers: shipment.rates?.map(r => r.provider),
+          objectId: shipment.objectId,
+        });
       }
     }
 
@@ -186,14 +213,17 @@ router.post('/', async (req, res) => {
 
     // Get cheapest rates for each shipment
     const cheapestRates = [];
-    for (const shipment of shipments) {
-      const rates = shipment.rates;
+    for (const [index, shipment] of shipments.entries()) {
+      const rates = shipment.rates || [];
       if (rates.length === 0) {
-        return res.status(400).json({ error: 'No rates available for one of the shipments.' });
+        console.error(`❌ Shipment ${index} returned no rates:
+`, JSON.stringify(shipment, null, 2));
+        return res.status(400).json({ error: 'No rates available for one of the shipments.', shipmentIndex: index });
       }
       const filteredRates = rates.filter(rate => rate.provider === 'UPS' || rate.provider === 'USPS');
       if (filteredRates.length === 0) {
-        return res.status(400).json({ error: 'No valid UPS or USPS rates found for one of the shipments.' });
+        console.error(`❌ Shipment ${index} has rates but no UPS/USPS providers:`, rates.map(rate => ({ provider: rate.provider, amount: rate.amount })));
+        return res.status(400).json({ error: 'No valid UPS or USPS rates found for one of the shipments.', shipmentIndex: index, availableProviders: rates.map(rate => rate.provider) });
       }
       const cheapestRate = filteredRates.reduce((min, current) => parseFloat(current.amount) < parseFloat(min.amount) ? current : min);
       cheapestRates.push(cheapestRate);
