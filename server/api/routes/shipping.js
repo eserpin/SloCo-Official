@@ -14,7 +14,8 @@ const normalizeAddress = (address) => {
 router.post('/', async (req, res) => {
   const { addressTo, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational } = req.body;
   const normalizedAddressTo = addressTo ? normalizeAddress(addressTo) : null;
-  console.log(JSON.stringify(req.body, null, 2));
+  console.log('📥 Incoming shipping request:', JSON.stringify(req.body, null, 2));
+  console.log('🔄 Normalized addressTo:', JSON.stringify(normalizedAddressTo, null, 2));
 
   // Validate the required 'addressTo' field
   if (!addressTo) {
