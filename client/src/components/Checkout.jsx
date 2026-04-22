@@ -16,7 +16,7 @@ export const Checkout = () => {
   const prints = cart.filter(item => item.type === "Print");
   function determineFormat(books, stickersBookmarks, prints) {
   if (books.length > 0) return "physical";
-  if (stickersBookmarks.length > 0 || prints.length > 0) return "physical-other";
+  if (stickersBookmarks.length > 0 || prints.length > 0) return "physical";
   return "digital";
 }
 const format = determineFormat(physicalBooks, stickersBookmarks, prints);
@@ -45,7 +45,7 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
   const history = useHistory();
   useEffect(() => {
     if (!cart || cart.length === 0) {
-      history.replace("/buy-a-copy");
+      history.replace("/buy");
     }
   }, [cart, history]);
 
@@ -75,7 +75,6 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
       country: getComponent("country") || "US",
       apartment: prevAddress.apartment,
     }));
-    console.log(addressComponents);
   };
 
   const calculateShipping = async () => {
@@ -94,7 +93,6 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
         printQuantity,
         isInternational: countryCode !== "US"
       });
-      console.log(address);
 
       if (response.data && response.data.totalShipping !== undefined) {
 

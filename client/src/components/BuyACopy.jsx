@@ -47,6 +47,7 @@ const BuyProduct = () => {
       id: productData.id,
       name: productData.name,
       price: productData.price,
+      type: productData.type,
       format,
       quantity: format === "digital" ? 1 : quantity,
       requiresShipping: format === "physical",
