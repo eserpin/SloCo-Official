@@ -95,22 +95,22 @@ export const products = [
     ]
 
   },
-  {
-    id: "flying-monkey-bookmark",
-    name: "Flying Monkey Bookmark",
-    type: "Bookmark",
-    price: 5,
-    description:[
-      "The monkey's hand hooks over the top of your page",
-      'One included with a purchase of the book "Nandi and the Castle in the Sea"',
-      "2x5 inches"
-    ],
-    images: [
-      { url: flyingMonkeyBookmark, thumbnail_url: flyingMonkeyBookmark },
-      { url: flyingMonkeyVid, thumbnail_url: flyingMonkeyVidThumbnail }
-    ]
+  // {
+  //   id: "flying-monkey-bookmark",
+  //   name: "Flying Monkey Bookmark",
+  //   type: "Bookmark",
+  //   price: 5,
+  //   description:[
+  //     "The monkey's hand hooks over the top of your page",
+  //     'One included with a purchase of the book "Nandi and the Castle in the Sea"',
+  //     "2x5 inches"
+  //   ],
+  //   images: [
+  //     { url: flyingMonkeyBookmark, thumbnail_url: flyingMonkeyBookmark },
+  //     { url: flyingMonkeyVid, thumbnail_url: flyingMonkeyVidThumbnail }
+  //   ]
 
-  },
+  // },
   {
     id: "nandi-mesca-sticker",
     name: "Nandi and Mesca Sticker",

@@ -237,9 +237,16 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error during order processing:', error);
+    console.error('❌ Error during order processing:');
+    console.error('Error message:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    console.error('Request body was:', JSON.stringify(req.body, null, 2));
     if (!res.headersSent) {
-      res.status(500).json({ error: 'An error occurred while processing your order.' });
+      res.status(500).json({
+        error: 'An error occurred while processing your order.',
+        details: error.message,
+        type: error.constructor.name
+      });
     }
   }
 });
