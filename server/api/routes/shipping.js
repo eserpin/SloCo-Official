@@ -3,19 +3,10 @@ const { shippo, addressFrom } = require('../config/shippo'); // Import the Shipp
 
 const router = express.Router();
 
-const normalizeAddress = (address) => {
-  const normalized = { ...address };
-  if (!normalized.zip && normalized.postal_code) normalized.zip = normalized.postal_code;
-  if (!normalized.postal_code && normalized.zip) normalized.postal_code = normalized.zip;
-  if (!normalized.country && normalized.country_code) normalized.country = normalized.country_code;
-  return normalized;
-};
 
 router.post('/', async (req, res) => {
   const { addressTo, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational } = req.body;
-  const normalizedAddressTo = addressTo ? normalizeAddress(addressTo) : null;
   console.log('📥 Incoming shipping request:', JSON.stringify(req.body, null, 2));
-  console.log('🔄 Normalized addressTo:', JSON.stringify(normalizedAddressTo, null, 2));
 
   // Validate the required 'addressTo' field
   if (!addressTo) {
@@ -85,7 +76,7 @@ router.post('/', async (req, res) => {
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo: { ...normalizedAddressTo, name: normalizedAddressTo.name || 'Customer' },
+        addressTo,
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -137,7 +128,7 @@ router.post('/', async (req, res) => {
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo: { ...normalizedAddressTo, name: normalizedAddressTo.name || 'Customer' },
+        addressTo,
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -190,7 +181,7 @@ router.post('/', async (req, res) => {
 
         const shipment = await shippo.shipments.create({
           addressFrom,
-          addressTo: { ...normalizedAddressTo, name: normalizedAddressTo.name || 'Customer' },
+          addressTo,
           parcels: [parcel],
           ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
         });
