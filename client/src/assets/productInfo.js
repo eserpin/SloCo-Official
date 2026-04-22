@@ -8,8 +8,8 @@ import goldFoilVidThumbnail from "../images/products/gold-foil-dragon-vid-thumbn
 import goldFoilVid2Thumbnail from "../images/products/gold-foil-dragon-vid-2-thumbnail.png";
 import nandiCoverPrint from "../images/products/nandi-cover-print.jpg";
 import blueDragonPrint from "../images/products/blue-dragon-print.jpg";
-import flyingMonkeyBookmark from "../images/products/flying-monkey.jpg";
-import flyingMonkeyVidThumbnail from "../images/products/flying-monkey-vid-thumbnail.png";
+// import flyingMonkeyBookmark from "../images/products/flying-monkey.jpg";
+// import flyingMonkeyVidThumbnail from "../images/products/flying-monkey-vid-thumbnail.png";
 import nandiMescaSticker from "../images/products/nandi-mesca-sticker.jpg";
 import dragonSticker from "../images/products/dragon-sticker.jpg";
 import timekeeperSticker from "../images/products/timekeeper-sticker.jpg";
@@ -24,7 +24,7 @@ import carobPukaSticker from "../images/products/carob-puka-sticker.jpg";
 // Videos are now served from public folder
 const goldFoilDragonVid = "/gold-foil-vid.mp4";
 const goldFoilVid2 = "/gold-foil-vid-2.mp4";
-const flyingMonkeyVid = "/flying-monkey-vid.mp4";
+// const flyingMonkeyVid = "/flying-monkey-vid.mp4";
 
 export const products = [
   {
