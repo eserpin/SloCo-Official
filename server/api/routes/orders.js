@@ -19,9 +19,9 @@ router.post('/', async (req, res) => {
   const labelUrls = [];
 
   try {
-    // Books shipment
+    // Books shipment (stickers/bookmarks are included but do not increase shipping weight)
     if (bookQuantity > 0) {
-      const weight = (1.6 * bookQuantity).toFixed(2);
+      const bookWeight = 1.6 * bookQuantity;
       let lengthP = "10", widthP = "7.5", heightP = "1";
       if (bookQuantity >= 2 && bookQuantity <= 4) {
         lengthP = "9";
@@ -30,7 +30,7 @@ router.post('/', async (req, res) => {
       }
 
       const parcel = {
-        weight: weight,
+        weight: bookWeight.toFixed(2),
         length: lengthP,
         width: widthP,
         height: heightP,
@@ -40,28 +40,45 @@ router.post('/', async (req, res) => {
 
       let customsDeclaration = null;
       if (isInternational) {
-        customsDeclaration = await shippo.customsDeclarations.create({
-          contentsType: "MERCHANDISE",
-          contentsExplanation: "Graphic Novel",
-          nonDeliveryOption: "RETURN",
-          certify: true,
-          certifySigner: "Anil Serpin",
-          items: [{
+        const items = [
+          {
             description: "Graphic Novel",
             quantity: bookQuantity,
-            netWeight: weight,
+            netWeight: bookWeight.toFixed(2),
             massUnit: "lb",
             valueAmount: (20 * bookQuantity).toFixed(2),
             valueCurrency: "USD",
             originCountry: "US",
-          }],
+          }
+        ];
+
+        if (otherPhysicalQuantity > 0) {
+          const stickerWeight = (0.04 * otherPhysicalQuantity).toFixed(2);
+          items.push({
+            description: "Stickers and Bookmarks",
+            quantity: otherPhysicalQuantity,
+            netWeight: stickerWeight,
+            massUnit: "lb",
+            valueAmount: (10 * otherPhysicalQuantity).toFixed(2),
+            valueCurrency: "USD",
+            originCountry: "US",
+          });
+        }
+
+        customsDeclaration = await shippo.customsDeclarations.create({
+          contentsType: "MERCHANDISE",
+          contentsExplanation: "Graphic Novel and Stickers/Bookmarks",
+          nonDeliveryOption: "RETURN",
+          certify: true,
+          certifySigner: "Anil Serpin",
+          items,
         });
         customsDeclarations.push(customsDeclaration);
       }
 
       const shipment = await shippo.shipments.create({
         addressFrom,
-        addressTo: address,
+        addressTo: { ...address, name },
         parcels: [parcel],
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
@@ -74,8 +91,9 @@ router.post('/', async (req, res) => {
 
     // Stickers/bookmarks shipment if no books
     else if (otherPhysicalQuantity > 0) {
+      const stickerWeight = (0.04 * otherPhysicalQuantity).toFixed(2);
       const parcel = {
-        weight: "0.5",
+        weight: stickerWeight,
         length: "6.5",
         width: "4.5",
         height: "1",
@@ -94,7 +112,7 @@ router.post('/', async (req, res) => {
           items: [{
             description: "Stickers and Bookmarks",
             quantity: otherPhysicalQuantity,
-            netWeight: "0.5",
+            netWeight: stickerWeight,
             massUnit: "lb",
             valueAmount: "10.00",
             valueCurrency: "USD",
