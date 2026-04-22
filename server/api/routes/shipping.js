@@ -195,8 +195,15 @@ router.post('/', async (req, res) => {
     res.status(200).json({ totalShipping });
 
   } catch (error) {
-    console.error('Error creating shipments or getting rates:', error);
-    res.status(500).json({ error: 'An error occurred while processing your request.' });
+    console.error('❌ Error creating shipments or getting rates:');
+    console.error('Error message:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    console.error('Request body was:', JSON.stringify(req.body, null, 2));
+    res.status(500).json({
+      error: 'An error occurred while processing your request.',
+      details: error.message,
+      type: error.constructor.name
+    });
   }
 });
 
