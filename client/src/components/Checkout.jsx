@@ -81,6 +81,7 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
   const calculateShipping = async () => {
     setLoading(true);
     setError(null);
+    const countryCode = countryCodes[address.country] || address.country;
 
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}api/shippingCalculation`, {
@@ -91,7 +92,7 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
         bookQuantity,
         otherPhysicalQuantity,
         printQuantity,
-        isInternational: address.country !== "US"
+        isInternational: countryCode !== "US"
       });
       console.log(address);
 
@@ -147,13 +148,15 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
       ? "api/placeDigitalOrder"
       : "api/placeOrder";
 
+    const countryCode = countryCodes[address.country] || address.country;
+
     const payload = {
       name: address.name,
       email: address.email,
       bookQuantity,
       otherPhysicalQuantity,
       printQuantity,
-      isInternational: address.country !== "US",
+      isInternational: countryCode !== "US",
       total: format === "digital" ? UNIT_PRICE : total,
       shippingPrice: format === "physical" ? shippingPrice : 0,
       transactionId: order.id,
