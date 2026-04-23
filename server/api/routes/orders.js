@@ -1,8 +1,8 @@
 // routes/order.js
 const express = require('express');
-const pool = require('../config/db');
+const pool = require('../config/db'); // Import the database pool
 const { shippo, addressFrom } = require('../config/shippo');
-const transporter = require('../config/mailer');
+const transporter = require('../config/mailer'); // Import the email transporter from mailer.js
 
 const router = express.Router();
 
@@ -14,33 +14,25 @@ const normalizeAddress = (address) => {
   return normalized;
 };
 
-// async worker (runs AFTER response)
-const processOrderAsync = async ({
-  name,
-  email,
-  bookQuantity,
-  otherPhysicalQuantity,
-  printQuantity,
-  isInternational,
-  total,
-  transactionId,
-  address,
-  cartItems,
-  shippingPrice
-}) => {
+// Place Order Route
+router.post('/', async (req, res) => {
+  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice } = req.body;
   const normalizedAddress = address ? normalizeAddress(address) : null;
+
+  if (!name || !email || !total || !transactionId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
 
   const shipments = [];
   const customsDeclarations = [];
   const labelUrls = [];
 
   try {
-    // ---------------- BOOKS ----------------
+    // Books shipment (stickers/bookmarks are included but do not increase shipping weight)
     if (bookQuantity > 0) {
       const bookWeight = 1.6 * bookQuantity;
       const stickerWeight = 0.04 * otherPhysicalQuantity;
       const totalWeight = bookWeight + stickerWeight;
-
       let lengthP = "10", widthP = "7.5", heightP = "1";
       if (bookQuantity >= 2 && bookQuantity <= 4) {
         lengthP = "9";
@@ -58,7 +50,6 @@ const processOrderAsync = async ({
       };
 
       let customsDeclaration = null;
-
       if (isInternational) {
         const items = [
           {
@@ -73,10 +64,11 @@ const processOrderAsync = async ({
         ];
 
         if (otherPhysicalQuantity > 0) {
+          const stickerWeight = (0.04 * otherPhysicalQuantity).toFixed(2);
           items.push({
             description: "Stickers and Bookmarks",
             quantity: otherPhysicalQuantity,
-            netWeight: (0.04 * otherPhysicalQuantity).toFixed(2),
+            netWeight: stickerWeight,
             massUnit: "lb",
             valueAmount: (10 * otherPhysicalQuantity).toFixed(2),
             valueCurrency: "USD",
@@ -92,7 +84,6 @@ const processOrderAsync = async ({
           certifySigner: "Anil Serpin",
           items,
         });
-
         customsDeclarations.push(customsDeclaration);
       }
 
@@ -103,13 +94,15 @@ const processOrderAsync = async ({
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
 
+      if (shipment.error) {
+        return res.status(400).json({ error: shipment.error.message });
+      }
       shipments.push(shipment);
     }
 
-    // ---------------- STICKERS ONLY ----------------
+    // Stickers/bookmarks shipment if no books
     else if (otherPhysicalQuantity > 0) {
       const stickerWeight = (0.04 * otherPhysicalQuantity).toFixed(2);
-
       const parcel = {
         weight: stickerWeight,
         length: "6.5",
@@ -120,7 +113,6 @@ const processOrderAsync = async ({
       };
 
       let customsDeclaration = null;
-
       if (isInternational) {
         customsDeclaration = await shippo.customsDeclarations.create({
           contentsType: "MERCHANDISE",
@@ -138,7 +130,6 @@ const processOrderAsync = async ({
             originCountry: "US",
           }],
         });
-
         customsDeclarations.push(customsDeclaration);
       }
 
@@ -149,13 +140,15 @@ const processOrderAsync = async ({
         ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
       });
 
+      if (shipment.error) {
+        return res.status(400).json({ error: shipment.error.message });
+      }
       shipments.push(shipment);
     }
 
-    // ---------------- PRINTS ----------------
+    // Prints shipments
     if (printQuantity > 0) {
       const numShipments = Math.ceil(printQuantity / 2);
-
       for (let i = 0; i < numShipments; i++) {
         const parcel = {
           weight: "1",
@@ -167,7 +160,6 @@ const processOrderAsync = async ({
         };
 
         let customsDeclaration = null;
-
         if (isInternational) {
           customsDeclaration = await shippo.customsDeclarations.create({
             contentsType: "MERCHANDISE",
@@ -185,32 +177,32 @@ const processOrderAsync = async ({
               originCountry: "US",
             }],
           });
-
           customsDeclarations.push(customsDeclaration);
         }
 
         const shipment = await shippo.shipments.create({
           addressFrom,
-          addressTo: { ...normalizedAddress, name },
+          addressTo: address,
           parcels: [parcel],
           ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
         });
 
+        if (shipment.error) {
+          return res.status(400).json({ error: shipment.error.message });
+        }
         shipments.push(shipment);
       }
     }
 
-    // ---------------- LABELS ----------------
+    // Create transactions for each shipment
     for (const shipment of shipments) {
-      const filteredRates = shipment.rates.filter(
-        r => r.provider === "UPS" || r.provider === "USPS"
-      );
-
-      if (!filteredRates.length) continue;
-
-      const cheapestRate = filteredRates.reduce((a, b) =>
-        parseFloat(a.amount) < parseFloat(b.amount) ? a : b
-      );
+      const filteredRates = shipment.rates.filter(rate => rate.provider === 'UPS' || rate.provider === 'USPS');
+      if (filteredRates.length === 0) {
+        return res.status(400).json({ error: 'No valid UPS or USPS rates found' });
+      }
+      const cheapestRate = filteredRates.reduce((minRate, currentRate) => {
+        return parseFloat(currentRate.amount) < parseFloat(minRate.amount) ? currentRate : minRate;
+      });
 
       const transaction = await shippo.transactions.create({
         async: false,
@@ -219,76 +211,73 @@ const processOrderAsync = async ({
         rate: cheapestRate.objectId,
       });
 
+      if (transaction.error) {
+        return res.status(400).json({ error: transaction.error.message });
+      }
+      console.log('✅ Transaction created successfully:', transaction);
       labelUrls.push(transaction.labelUrl);
     }
 
-    // ---------------- DB ----------------
-    await pool.query(
-      `INSERT INTO orders (transaction_id, name, email, quantity)
-       VALUES ($1, $2, $3, $4)`,
-      [transactionId, name, email, bookQuantity]
-    );
+    // Save order to the database
+    const query = `
+      INSERT INTO orders (transaction_id, name, email, quantity)
+      VALUES ($1, $2, $3, $4) RETURNING *;
+    `;
+    const values = [transactionId, name, email, bookQuantity];
 
-    // ---------------- EMAIL ----------------
-    await transporter.sendMail({
+    const { rows } = await pool.query(query, values);
+    if (rows.length === 0) {
+      throw new Error('Order was not saved in the database.');
+    }
+    console.log('✅ Order saved to database:', rows[0]);
+
+    const cartSummary = (cartItems && cartItems.length)
+      ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
+      : `Books: ${bookQuantity}\nStickers/Bookmarks: ${otherPhysicalQuantity}\nPrints: ${printQuantity}`;
+
+    const adminText = `New order received!\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\n\nShipping Address:\n${address?.street1 || ''}${address?.apartment ? '\n' + address.apartment : ''}\n${address?.city || ''}, ${address?.state || ''} ${address?.postal_code || address?.zip || ''}\n${address?.country || ''}\nPhone: ${address?.phone || 'N/A'}\n\nPurchase Details:\n${cartSummary}\n\nShipping Price: $${shippingPrice !== undefined && shippingPrice !== null ? Number(shippingPrice).toFixed(2) : '0.00'}\nTotal Charged: $${Number(total).toFixed(2)}\n\nShipping Labels: ${labelUrls.join(', ')}`;
+
+    const mailOptionsAdmin = {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',
       subject: `Order Received #${transactionId}`,
-      text: `Order complete. Labels:\n${labelUrls.join("\n")}`
-    });
+      text: adminText,
+    };
 
-    await transporter.sendMail({
+    // Send email to the admin
+    await transporter.sendMail(mailOptionsAdmin);
+    console.log('✅ Admin email sent successfully');
+
+    // Send a confirmation email to the customer
+    const mailOptionsCustomer = {
       from: process.env.GMAIL_USER,
       to: email,
-      subject: "Order Confirmation",
-      text: "Your order has been received."
+      subject: 'Order Confirmation: "Nandi and the Castle in the Sea"',
+      text: `Thank you for your order! Your order has been received and will be shipped soon. Once it is shipped, you will receive another email with a tracking number.`,
+    };
+
+    // Send email to the customer
+    await transporter.sendMail(mailOptionsCustomer);
+    console.log('✅ Confirmation email sent to customer');
+
+    // Respond with success message
+    res.status(200).json({
+      message: 'Order placed successfully! Labels created, emailed, and order saved.',
     });
 
-  } catch (err) {
-    console.error("Background order error:", err);
+  } catch (error) {
+    console.error('❌ Error during order processing:');
+    console.error('Error message:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    console.error('Request body was:', JSON.stringify(req.body, null, 2));
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'An error occurred while processing your order.',
+        details: error.message,
+        type: error.constructor.name
+      });
+    }
   }
-};
-
-// MAIN ROUTE
-router.post('/', async (req, res) => {
-  const {
-    name,
-    email,
-    bookQuantity,
-    otherPhysicalQuantity,
-    printQuantity,
-    isInternational,
-    total,
-    transactionId,
-    address,
-    cartItems,
-    shippingPrice
-  } = req.body;
-
-  if (!name || !email || !total || !transactionId) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  // respond immediately to avoid Vercel timeout
-  res.status(200).json({
-    message: "Order received. Processing in background.",
-    transactionId
-  });
-
-  // run heavy work AFTER response
-  processOrderAsync({
-    name,
-    email,
-    bookQuantity,
-    otherPhysicalQuantity,
-    printQuantity,
-    isInternational,
-    total,
-    transactionId,
-    address,
-    cartItems,
-    shippingPrice
-  });
 });
 
 module.exports = router;
