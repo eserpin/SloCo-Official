@@ -94,6 +94,7 @@ const printQuantity = prints.reduce((sum, item) => sum + item.quantity, 0);
         isInternational: countryCode !== "US"
       });
 
+
       if (response.data && response.data.totalShipping !== undefined) {
 
         console.log("📊 Breakdown:");

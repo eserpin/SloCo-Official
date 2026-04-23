@@ -31,6 +31,8 @@ router.post('/', async (req, res) => {
     // Books shipment (stickers/bookmarks are included but do not increase shipping weight)
     if (bookQuantity > 0) {
       const bookWeight = 1.6 * bookQuantity;
+      const stickerWeight = 0.04 * otherPhysicalQuantity;
+      const totalWeight = bookWeight + stickerWeight;
       let lengthP = "10", widthP = "7.5", heightP = "1";
       if (bookQuantity >= 2 && bookQuantity <= 4) {
         lengthP = "9";
@@ -39,7 +41,7 @@ router.post('/', async (req, res) => {
       }
 
       const parcel = {
-        weight: bookWeight.toFixed(2),
+        weight: totalWeight.toFixed(2),
         length: lengthP,
         width: widthP,
         height: heightP,
@@ -180,7 +182,7 @@ router.post('/', async (req, res) => {
 
         const shipment = await shippo.shipments.create({
           addressFrom,
-          addressTo: { ...normalizedAddress, name },
+          addressTo: address,
           parcels: [parcel],
           ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
         });

@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
   console.log('🔄 Normalized addressTo:', JSON.stringify(normalizedAddressTo, null, 2));
 
   const shipments = [];
-
+  const shipmentPlan = [];
   try {
     // =========================================================
     // 📦 1. BOOK + STICKERS (ALWAYS TOGETHER IF BOOK EXISTS)
@@ -94,6 +94,12 @@ router.post('/', async (req, res) => {
           items,
         });
       }
+      shipmentPlan.push({
+        type: "book",
+        quantity: bookQuantity,
+        parcel,
+        customsDeclaration: customsDeclaration ? customsDeclaration.objectId : null
+      });
 
       const shipment = await shippo.shipments.create({
         addressFrom,
@@ -161,7 +167,12 @@ router.post('/', async (req, res) => {
           customsDeclaration: customsDeclaration.objectId,
         }),
       });
-
+      shipmentPlan.push(shipmentPlan.push({
+        type: "stickers",
+        quantity: otherPhysicalQuantity,
+        parcel,
+        customsDeclaration: customsDeclaration ? customsDeclaration.objectId : null
+      });)
       shipments.push(shipment);
 
       console.log('✅ STICKERS shipment created');
@@ -221,7 +232,12 @@ router.post('/', async (req, res) => {
         });
 
         shipments.push(shipment);
-
+        shipmentPlan.push(shipmentPlan.push({
+          type: "print",
+          quantity: Math.min(2, printQuantity - i * 2),
+          parcel,
+          customsDeclaration: customsDeclaration ? customsDeclaration.objectId : null
+        });)
         console.log(`✅ PRINT shipment ${i + 1} created`);
       }
     }
@@ -290,8 +306,8 @@ if (!isInternational) {
 
     return res.status(200).json({
       totalShipping,
-      shippingBreakdown,
-      shipmentCount: cheapestRates.length
+      shipmentPlan,
+      shipmentCount: shipmentPlan.length
     });
 
   } catch (error) {
