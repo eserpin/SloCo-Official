@@ -21,6 +21,7 @@ const App = () => {
         <Switch>
           <Route path="/" exact component={HomePage} />
           <Route exact path="/buy" render={() => <Redirect to="/buy/nandi-book" />} />
+          <Route exact path="/buy-a-copy" render={() => <Redirect to="/buy/nandi-book" />} />
           <Route path="/buy/:productId" component={BuyACopy} />
           <Route path="/products" component={ProductList} />
           <Route path="/cart" component={Cart} />
