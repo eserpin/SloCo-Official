@@ -257,7 +257,7 @@ router.post('/', async (req, res) => {
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Order Confirmation: "Nandi and the Castle in the Sea"',
-      text: `Thank you for your order! Your order has been received and will be shipped soon. Once it is shipped, you will receive another email with a tracking number.`,
+      text: `Thank you for your order! Your order has been received and will be shipped promptly. Please reply to this email with any questions or concerns.`,
     };
 
     // Send email to the customer
