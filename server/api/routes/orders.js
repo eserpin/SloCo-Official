@@ -252,56 +252,17 @@ router.post('/', async (req, res) => {
     await transporter.sendMail(mailOptionsAdmin);
     console.log('✅ Admin email sent successfully');
 
-    if (!transactionError) {
-      // ✅ SUCCESS CASE: send tracking info
+    // Send a confirmation email to the customer
+    const mailOptionsCustomer = {
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: 'Order Confirmation: "Nandi and the Castle in the Sea"',
+      text: `Thank you for your order! Your order has been received and will be shipped soon. Once it is shipped, you will receive another email with a tracking number.`,
+    };
 
-      const trackingInfo = shipments.map((shipment, index) => {
-        const t = shipment._transaction;
-
-        return `
-    Package ${index + 1}:
-    Carrier: ${t.carrier}
-    Tracking Number: ${t.trackingNumber}
-    Tracking URL: ${t.trackingUrlProvider}
-    `;
-      }).join('\n');
-
-      const mailOptionsCustomer = {
-        from: process.env.GMAIL_USER,
-        to: email,
-        subject: `Your Order Tracking Info #${transactionId}`,
-        text: `
-    Thank you for your order!
-
-    Your shipping label(s) have been created:
-
-    ${trackingInfo}
-    `,
-      };
-
-      await transporter.sendMail(mailOptionsCustomer);
-      console.log('✅ Tracking email sent to customer');
-
-    } else {
-      // ❌ FAILURE CASE: fallback email
-
-      const mailOptionsCustomer = {
-        from: process.env.GMAIL_USER,
-        to: email,
-        subject: 'Order Received - Shipping Pending',
-        text: `
-    Thank you for your order!
-
-    We received your order, but we are still processing your shipping labels.
-    Once they are successfully created, you will receive another email with tracking information.
-
-    Order ID: ${transactionId}
-    `,
-      };
-
-      await transporter.sendMail(mailOptionsCustomer);
-      console.log('⚠️ Fallback confirmation email sent to customer');
-    }
+    // Send email to the customer
+    await transporter.sendMail(mailOptionsCustomer);
+    console.log('✅ Confirmation email sent to customer');
 
     // Respond with success message
     res.status(200).json({
