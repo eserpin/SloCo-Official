@@ -51,7 +51,7 @@ export const HomePage = () => {
           Nandi is generally content with this tranquil lifestyle. Whenever he's in the water, though, he gets a strange feeling, as if the castle is calling
           out to him...
         </p>
-        <Link to="/buy-a-copy">
+        <Link to="/buy">
             <button className="btn-read">Buy Now</button>
         </Link>
       </section >
