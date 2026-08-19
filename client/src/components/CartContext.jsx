@@ -1,11 +1,25 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext();
+const CART_STORAGE_KEY = "slowComicsCart";
+const getMaxQuantity = (item) => item.id === "nandi-book" ? 4 : 5;
 
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = window.localStorage.getItem(CART_STORAGE_KEY);
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (error) {
+      console.error("Could not load cart:", error);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  }, [cart]);
 
   const addToCart = (product) => {
     setCart((prev) => {
@@ -16,7 +30,7 @@ export const CartProvider = ({ children }) => {
       if (existing) {
         return prev.map((item) =>
           item.id === product.id && item.format === product.format
-            ? { ...item, quantity: item.quantity + product.quantity }
+            ? { ...item, quantity: Math.min(item.quantity + product.quantity, getMaxQuantity(item)) }
             : item
         );
       }

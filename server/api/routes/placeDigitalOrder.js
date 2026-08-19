@@ -2,16 +2,52 @@ const express = require('express');
 const pool = require('../config/db');
 const transporter = require('../config/mailer');
 const crypto = require('crypto');
+const getStripe = require('../config/stripe');
+const { getSubtotal, toCents } = require('../config/products');
 const router = express.Router();
 
-router.post('/', async (req, res) => {
-  const { name, email, transactionId, cartItems } = req.body;
+const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total }) => {
+  if (!transactionId || typeof transactionId !== 'string') {
+    throw new Error('Invalid payment transaction');
+  }
 
-  if (!name || !email || !transactionId) {
+  if (cartItems?.some(item => item.requiresShipping || item.format === 'physical')) {
+    throw new Error('Shipped items must be checked out separately from digital downloads');
+  }
+
+  const subtotal = getSubtotal(cartItems || []);
+
+  if (total !== undefined && total !== null && toCents(total) !== toCents(subtotal)) {
+    throw new Error('Order total does not match cart subtotal');
+  }
+
+  if (paymentProvider === 'paypal' || !transactionId.startsWith('pi_')) {
+    return { id: transactionId, paymentProvider: 'paypal' };
+  }
+
+  const paymentIntent = await getStripe().paymentIntents.retrieve(transactionId);
+
+  if (paymentIntent.status !== 'succeeded') {
+    throw new Error(`Payment has not succeeded. Current status: ${paymentIntent.status}`);
+  }
+
+  if (paymentIntent.amount_received < toCents(subtotal)) {
+    throw new Error('Payment amount is less than the order total');
+  }
+
+  return paymentIntent;
+};
+
+router.post('/', async (req, res) => {
+  const { name, email, transactionId, cartItems, paymentProvider, total } = req.body;
+
+  if (!name || !email || !transactionId || !cartItems?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
+    await verifyPayment({ transactionId, cartItems, paymentProvider, total });
+
     // Insert the order
     const orderResult = await pool.query(
       `INSERT INTO digital_orders (name, email, transaction_id)
@@ -46,11 +82,13 @@ router.post('/', async (req, res) => {
       ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
       : 'No itemized cart details were sent.';
 
+    const paymentMethod = paymentProvider === 'paypal' ? 'PayPal' : 'Stripe';
+
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',
       subject: `Digital Order Received #${transactionId}`,
-      text: `New digital order received!\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nDownload link sent to customer: ${downloadLink}`,
+      text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nDownload link sent to customer: ${downloadLink}`,
     });
 
     res.status(200).json({

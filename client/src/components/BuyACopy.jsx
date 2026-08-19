@@ -9,6 +9,7 @@ import { products } from "../assets/productInfo";
 const BuyProduct = () => {
   const { productId } = useParams();
   const productData = products.find(p => p.id === productId);
+  const maxQuantity = productData?.id === "nandi-book" ? 4 : 5;
 
   const { cart, addToCart } = useCart();
 
@@ -31,7 +32,7 @@ const BuyProduct = () => {
   if (!productData) return <div>Product not found</div>;
 
   const handleQuantityChange = (event) => {
-    setQuantity(parseInt(event.target.value));
+    setQuantity(Math.min(parseInt(event.target.value), maxQuantity));
   };
 
   const handleFormatChange = (event) => {
@@ -146,12 +147,17 @@ const BuyProduct = () => {
                 onChange={handleQuantityChange}
                 className="quantity-select"
               >
-                {[...Array(5).keys()].map((num) => (
+                {[...Array(maxQuantity).keys()].map((num) => (
                   <option key={num + 1} value={num + 1}>
                     {num + 1}
                   </option>
                 ))}
               </select>
+              {productData.id === "nandi-book" && (
+                <p className="bulk-order-note">
+                  For bulk orders, email slow.comics.publishing@gmail.com.
+                </p>
+              )}
             </div>
           )}
 

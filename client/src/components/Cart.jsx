@@ -6,8 +6,13 @@ import Footer from "./Footer";
 
 export const Cart = () => {
   const { cart, removeFromCart, setCart } = useCart();
+  const getMaxQuantity = (item) => item.id === "nandi-book" ? 4 : 5;
+
   const updateQuantity = (index, newQuantity) => {
     if (newQuantity < 1) return;
+    const maxQuantity = getMaxQuantity(cart[index]);
+    if (newQuantity > maxQuantity) return;
+
     const updatedCart = [...cart];
     updatedCart[index].quantity = newQuantity;
     setCart(updatedCart);
@@ -57,7 +62,7 @@ export const Cart = () => {
                   <div className="item-quantity">
                     <button onClick={() => updateQuantity(index, item.quantity - 1)} disabled={item.quantity <= 1}>-</button>
                     <span>{item.quantity}</span>
-                    <button onClick={() => updateQuantity(index, item.quantity + 1)} disabled={item.quantity >= 5}>+</button>
+                    <button onClick={() => updateQuantity(index, item.quantity + 1)} disabled={item.quantity >= getMaxQuantity(item)}>+</button>
                   </div>
 
                   <div className="item-price">

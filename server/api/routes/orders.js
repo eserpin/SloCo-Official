@@ -3,6 +3,8 @@ const express = require('express');
 const pool = require('../config/db'); // Import the database pool
 const { shippo, addressFrom } = require('../config/shippo');
 const transporter = require('../config/mailer'); // Import the email transporter from mailer.js
+const getStripe = require('../config/stripe');
+const { getSubtotal, toCents } = require('../config/products');
 
 const router = express.Router();
 
@@ -14,9 +16,41 @@ const normalizeAddress = (address) => {
   return normalized;
 };
 
+const verifyPayment = async ({ transactionId, total, cartItems, shippingPrice, paymentProvider }) => {
+  if (!transactionId || typeof transactionId !== 'string') {
+    throw new Error('Invalid payment transaction');
+  }
+
+  if (cartItems?.some(item => item.format === 'digital' || item.requiresShipping === false)) {
+    throw new Error('Digital downloads must be checked out separately from shipped items');
+  }
+
+  const expectedTotal = getSubtotal(cartItems || []) + Number(shippingPrice || 0);
+
+  if (toCents(total) !== toCents(expectedTotal)) {
+    throw new Error('Order total does not match cart subtotal and shipping');
+  }
+
+  if (paymentProvider === 'paypal' || !transactionId.startsWith('pi_')) {
+    return { id: transactionId, paymentProvider: 'paypal' };
+  }
+
+  const paymentIntent = await getStripe().paymentIntents.retrieve(transactionId);
+
+  if (paymentIntent.status !== 'succeeded') {
+    throw new Error(`Payment has not succeeded. Current status: ${paymentIntent.status}`);
+  }
+
+  if (paymentIntent.amount_received < toCents(total)) {
+    throw new Error('Payment amount is less than the order total');
+  }
+
+  return paymentIntent;
+};
+
 // Place Order Route
 router.post('/', async (req, res) => {
-  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice } = req.body;
+  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice, paymentProvider } = req.body;
   const normalizedAddress = address ? normalizeAddress(address) : null;
 
   if (!name || !email || !total || !transactionId) {
@@ -28,6 +62,8 @@ router.post('/', async (req, res) => {
   const labelUrls = [];
 
   try {
+    await verifyPayment({ transactionId, total, cartItems, shippingPrice, paymentProvider });
+
     // Books shipment (stickers/bookmarks are included but do not increase shipping weight)
     if (bookQuantity > 0) {
       const bookWeight = 1.6 * bookQuantity;
@@ -239,7 +275,11 @@ router.post('/', async (req, res) => {
       ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
       : `Books: ${bookQuantity}\nStickers/Bookmarks: ${otherPhysicalQuantity}\nPrints: ${printQuantity}`;
 
-    const adminText = `New order received!\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\n\nShipping Address:\n${address?.street1 || ''}${address?.apartment ? '\n' + address.apartment : ''}\n${address?.city || ''}, ${address?.state || ''} ${address?.postal_code || address?.zip || ''}\n${address?.country || ''}\nPhone: ${address?.phone || 'N/A'}\n\nPurchase Details:\n${cartSummary}\n\nShipping Price: $${shippingPrice !== undefined && shippingPrice !== null ? Number(shippingPrice).toFixed(2) : '0.00'}\nTotal Charged: $${Number(total).toFixed(2)}\n\nShipping Labels: ${labelUrls.join(', ')}`;
+    const paymentMethod = paymentProvider === 'paypal' ? 'PayPal' : 'Stripe';
+    const paypalReviewNote = paymentProvider === 'paypal'
+      ? '\nManual review required: confirm this PayPal payment before shipping.\n'
+      : '';
+    const adminText = `New order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}${paypalReviewNote}\nCustomer: ${name}\nEmail: ${email}\n\nShipping Address:\n${address?.street1 || ''}${address?.apartment ? '\n' + address.apartment : ''}\n${address?.city || ''}, ${address?.state || ''} ${address?.postal_code || address?.zip || ''}\n${address?.country || ''}\nPhone: ${address?.phone || 'N/A'}\n\nPurchase Details:\n${cartSummary}\n\nShipping Price: $${shippingPrice !== undefined && shippingPrice !== null ? Number(shippingPrice).toFixed(2) : '0.00'}\nTotal Charged: $${Number(total).toFixed(2)}\n\nShipping Labels: ${labelUrls.join(', ')}`;
 
     const mailOptionsAdmin = {
       from: process.env.GMAIL_USER,

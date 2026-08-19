@@ -41,4 +41,3 @@ If you have any questions, feel free to reach out:
 
 ### License
 This project is proprietary and all rights are reserved. Unauthorized use, distribution, or modification is prohibited without explicit permission from the owner.
-

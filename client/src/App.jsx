@@ -1,6 +1,5 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { CartProvider } from "./components/CartContext";
 import {Cart} from "./components/Cart";
 import {HomePage} from "./components/HomePage";
@@ -13,7 +12,6 @@ import {ReaderAuthenticate} from "./components/ReaderAuthenticate";
 import {ThankYou} from "./components/ThankYou";
 const App = () => {
   return (
-    <PayPalScriptProvider options={{ "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID, currency: "USD" }}>
     <CartProvider>
     <Router>
       {/* <RouteChangeTracker /> */}
@@ -33,7 +31,6 @@ const App = () => {
       </div>
     </Router>
     </CartProvider>
-    </PayPalScriptProvider>
   );
 };
 
