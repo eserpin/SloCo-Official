@@ -11,7 +11,22 @@ router.post('/', async (req, res) => {
   const lowerEmail = email.toLowerCase();
   try {
     // Check if email exists in orders table
-    const result = await pool.query('SELECT * FROM orders WHERE email = $1', [email]);
+    const result = await pool.query(
+  `
+    SELECT email
+    FROM orders
+    WHERE LOWER(email) = $1
+
+    UNION
+
+    SELECT email
+    FROM digital_orders
+    WHERE LOWER(email) = $1
+
+    LIMIT 1
+  `,
+  [lowerEmail]
+);
     if (result.rows.length === 0) {
       return res.status(400).json({ message: "Email not found in database" });
     }
