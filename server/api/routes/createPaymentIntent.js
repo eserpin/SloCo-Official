@@ -11,6 +11,8 @@ router.post('/', async (req, res) => {
     currency = 'USD',
     format,
     cartItems,
+    address,
+    orderQuantities = {},
     shippingPrice = 0,
   } = req.body;
 
@@ -42,6 +44,9 @@ router.post('/', async (req, res) => {
 
     const subtotal = getSubtotal(cartItems);
     const normalizedShipping = format === 'physical' ? Number(shippingPrice) : 0;
+    const lineItems = cartItems
+      .map(item => `${item.id}:${item.quantity}`)
+      .join(',');
 
     if (!Number.isFinite(normalizedShipping) || normalizedShipping < 0) {
       return res.status(400).json({ error: 'Invalid shipping price' });
@@ -66,6 +71,10 @@ router.post('/', async (req, res) => {
         format,
         subtotal: subtotal.toFixed(2),
         shippingPrice: normalizedShipping.toFixed(2),
+        total: (subtotal + normalizedShipping).toFixed(2),
+        lineItems,
+        orderQuantities: JSON.stringify(orderQuantities),
+        address: address ? JSON.stringify(address) : '',
       },
     });
 

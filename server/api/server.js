@@ -20,12 +20,14 @@ const shippingRoutes = require('./routes/shipping');
 const placeDigitalOrder = require('./routes/placeDigitalOrder');
 const downloadRoute = require('./routes/download');
 const createPaymentIntent = require('./routes/createPaymentIntent');
+const stripeWebhook = require('./routes/stripeWebhook');
 
 // Initialize express
 const app = express();
 
 // Middleware
 app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use('/api/stripeWebhook', stripeWebhook); // Stripe needs the raw body for webhook signatures
 app.use(bodyParser.json()); // Parse incoming JSON requests
 
 // Set up routes with updated paths

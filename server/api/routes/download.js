@@ -20,7 +20,7 @@ router.get('/:token', async (req, res) => {
     const result = await pool.query(`
       SELECT * FROM download_tokens
       WHERE token = $1
-      AND created_at > NOW() - INTERVAL '48 hours'
+      AND created_at > NOW() - INTERVAL '10 days'
       AND uses_left > 0
     `, [token]);
 

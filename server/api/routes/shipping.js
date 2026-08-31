@@ -28,6 +28,14 @@ router.post('/', async (req, res) => {
 
   const normalizedAddressTo = normalizeAddress(addressTo);
 
+  const phone = String(normalizedAddressTo.phone || '').trim();
+
+  if (isInternational && !phone) {
+    return res.status(400).json({
+      error: 'A phone number is required for international orders so customs declarations can be completed.',
+    });
+  }
+
   console.log('📥 Incoming shipping request:', JSON.stringify(req.body, null, 2));
   console.log('🔄 Normalized addressTo:', JSON.stringify(normalizedAddressTo, null, 2));
 

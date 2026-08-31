@@ -48,14 +48,40 @@ router.post('/', async (req, res) => {
   try {
     await verifyPayment({ transactionId, cartItems, paymentProvider, total });
 
-    // Insert the order
-    const orderResult = await pool.query(
-      `INSERT INTO digital_orders (name, email, transaction_id)
-       VALUES ($1, $2, $3) RETURNING id`,
-      [name, email, transactionId]
+    const existingOrder = await pool.query(
+      'SELECT id FROM digital_orders WHERE transaction_id = $1 LIMIT 1',
+      [transactionId]
     );
 
-    const orderId = orderResult.rows[0].id;
+    let orderId = existingOrder.rows[0]?.id;
+
+    if (orderId) {
+      const existingToken = await pool.query(
+        `SELECT token FROM download_tokens
+         WHERE order_id = $1
+         AND created_at > NOW() - INTERVAL '10 days'
+         AND uses_left > 0
+         LIMIT 1`,
+        [existingOrder.rows[0].id]
+      );
+
+      if (existingToken.rows.length > 0) {
+        return res.status(200).json({
+          message: 'Digital order already exists for this payment.',
+          downloadLink: `${process.env.BACKEND_URL}api/download/${existingToken.rows[0].token}`,
+        });
+      }
+    }
+
+    if (!orderId) {
+      const orderResult = await pool.query(
+        `INSERT INTO digital_orders (name, email, transaction_id)
+         VALUES ($1, $2, $3) RETURNING id`,
+        [name, email, transactionId]
+      );
+
+      orderId = orderResult.rows[0].id;
+    }
 
     // Generate token
     const token = crypto.randomBytes(32).toString('hex');

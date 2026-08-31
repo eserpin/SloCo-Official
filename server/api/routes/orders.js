@@ -60,9 +60,35 @@ router.post('/', async (req, res) => {
   const shipments = [];
   const customsDeclarations = [];
   const labelUrls = [];
+  let savedOrder = null;
 
   try {
     await verifyPayment({ transactionId, total, cartItems, shippingPrice, paymentProvider });
+
+    const existingOrder = await pool.query(
+      'SELECT * FROM orders WHERE transaction_id = $1 LIMIT 1',
+      [transactionId]
+    );
+
+    if (existingOrder.rows.length > 0) {
+      return res.status(200).json({
+        message: 'Order already exists for this payment.',
+        order: existingOrder.rows[0],
+      });
+    }
+
+    const query = `
+      INSERT INTO orders (transaction_id, name, email, quantity)
+      VALUES ($1, $2, $3, $4) RETURNING *;
+    `;
+    const values = [transactionId, name, email, bookQuantity];
+
+    const { rows } = await pool.query(query, values);
+    if (rows.length === 0) {
+      throw new Error('Order was not saved in the database.');
+    }
+    savedOrder = rows[0];
+    console.log('✅ Order saved to database:', savedOrder);
 
     // Books shipment (stickers/bookmarks are included but do not increase shipping weight)
     if (bookQuantity > 0) {
@@ -258,19 +284,6 @@ router.post('/', async (req, res) => {
       labelUrls.push(transaction.labelUrl);
     }
 
-    // Save order to the database
-    const query = `
-      INSERT INTO orders (transaction_id, name, email, quantity)
-      VALUES ($1, $2, $3, $4) RETURNING *;
-    `;
-    const values = [transactionId, name, email, bookQuantity];
-
-    const { rows } = await pool.query(query, values);
-    if (rows.length === 0) {
-      throw new Error('Order was not saved in the database.');
-    }
-    console.log('✅ Order saved to database:', rows[0]);
-
     const cartSummary = (cartItems && cartItems.length)
       ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
       : `Books: ${bookQuantity}\nStickers/Bookmarks: ${otherPhysicalQuantity}\nPrints: ${printQuantity}`;
@@ -314,9 +327,23 @@ router.post('/', async (req, res) => {
     console.error('Error message:', error.message);
     console.error('Full error:', JSON.stringify(error, null, 2));
     console.error('Request body was:', JSON.stringify(req.body, null, 2));
+    if (savedOrder) {
+      try {
+        await transporter.sendMail({
+          from: process.env.GMAIL_USER,
+          to: 'slow.comics.publishing@gmail.com',
+          subject: `Manual Fulfillment Needed #${transactionId}`,
+          text: `Payment and order were recorded, but automatic fulfillment failed.\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\nReason: ${error.message}\n\nCheck Shippo/email logs and fulfill this order manually if labels were not created.`,
+        });
+      } catch (mailError) {
+        console.error('Manual fulfillment alert failed:', mailError);
+      }
+    }
     if (!res.headersSent) {
-      res.status(500).json({
-        error: 'An error occurred while processing your order.',
+      res.status(savedOrder ? 202 : 500).json({
+        error: savedOrder
+          ? 'Payment and order were recorded, but fulfillment needs manual review.'
+          : 'An error occurred while processing your order.',
         details: error.message,
         type: error.constructor.name
       });

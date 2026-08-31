@@ -20,6 +20,8 @@ const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY ||
 const paypalClientId = process.env.REACT_APP_PAYPAL_CLIENT_ID || "";
 const PENDING_CHECKOUT_KEY = "slowComicsPendingCheckout";
 const FULFILLED_PAYMENT_KEY = "slowComicsFulfilledPaymentIntent";
+const INTERNATIONAL_PHONE_REQUIRED_MESSAGE =
+  "A phone number is required for international orders so we can complete customs declarations.";
 
 const getApiUrl = (path) => `${process.env.REACT_APP_API_URL}${path}`;
 
@@ -434,10 +436,12 @@ export const Checkout = () => {
   const total = cartShape.format === "physical" ? subtotal + (shippingPrice || 0) : subtotal;
   const countryCode = countryCodes[address.country] || address.country;
   const isInternational = countryCode !== "US";
+  const hasRequiredInternationalPhone = !isInternational || Boolean(address.phone.trim());
   const canCreatePayment =
     cart.length > 0 &&
     address.name &&
     address.email &&
+    hasRequiredInternationalPhone &&
     !cartShape.hasMixedFulfillment &&
     (cartShape.format === "digital" || shippingPrice !== null);
   const paymentIntentKey = useMemo(
@@ -448,9 +452,10 @@ export const Checkout = () => {
         email: address.email,
         format: cartShape.format,
         name: address.name,
+        phone: address.phone,
         shippingPrice: cartShape.format === "physical" ? shippingPrice : 0,
       }),
-    [address.email, address.name, cart, cartShape.format, currency, shippingPrice]
+    [address.email, address.name, address.phone, cart, cartShape.format, currency, shippingPrice]
   );
 
   useEffect(() => {
@@ -477,14 +482,23 @@ export const Checkout = () => {
       zip: getComponent("postal_code"),
       country: getComponent("country") || "US",
       apartment: prevAddress.apartment,
+      phone: prevAddress.phone,
     }));
     setShippingPrice(null);
   };
 
   const calculateShipping = async () => {
-    setLoading(true);
     setError(null);
     setClientSecret(null);
+
+    if (isInternational && !address.phone.trim()) {
+      setShippingPrice(null);
+      setError(INTERNATIONAL_PHONE_REQUIRED_MESSAGE);
+      alert(INTERNATIONAL_PHONE_REQUIRED_MESSAGE);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await axios.post(getApiUrl("api/shippingCalculation"), {
@@ -524,6 +538,11 @@ export const Checkout = () => {
         subtotal,
         shippingPrice: cartShape.format === "physical" ? shippingPrice : 0,
         format: cartShape.format,
+        address: {
+          ...address,
+          street2: address.apartment || "",
+        },
+        orderQuantities: cartShape,
         cartItems: getCartItemsForOrder(cart),
       });
 
@@ -540,7 +559,7 @@ export const Checkout = () => {
         setPaymentIntentLoading(false);
       }
     }
-  }, [address.email, address.name, canCreatePayment, cart, cartShape.format, currency, shippingPrice, subtotal, total]);
+  }, [address, canCreatePayment, cart, cartShape, currency, shippingPrice, subtotal, total]);
 
   useEffect(() => {
     if (stripeReturnClientSecret || !canCreatePayment || clientSecret || paymentIntentLoading) return;
@@ -607,8 +626,12 @@ export const Checkout = () => {
                 type="text"
                 name="phone"
                 value={address.phone}
-                onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                required
+                onChange={(e) => {
+                  setAddress({ ...address, phone: e.target.value });
+                  setShippingPrice(null);
+                  setClientSecret(null);
+                }}
+                required={isInternational}
               />
             </label>
           )}
