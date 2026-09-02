@@ -12,9 +12,10 @@ const normalizeAddress = (address) => {
   if (!normalized.postal_code && normalized.zip) {
     normalized.postal_code = normalized.zip;
   }
-  if (!normalized.country && normalized.country_code) {
+  if (normalized.country_code) {
     normalized.country = normalized.country_code;
   }
+  delete normalized.country_code;
 
   return normalized;
 };

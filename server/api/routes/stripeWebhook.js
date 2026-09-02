@@ -4,6 +4,10 @@ const getStripe = require('../config/stripe');
 const transporter = require('../config/mailer');
 
 const router = express.Router();
+const MISSING_ORDER_RECHECK_DELAY_MS = Number(process.env.MISSING_ORDER_RECHECK_DELAY_MS || 30000);
+const MISSING_ORDER_GRACE_SECONDS = Number(process.env.MISSING_ORDER_GRACE_SECONDS || 300);
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const notifyAdmin = async ({ subject, text }) => {
   await transporter.sendMail({
@@ -30,6 +34,11 @@ const orderExists = async ({ transactionId, format }) => {
   );
 
   return existingOrder.rows.length > 0;
+};
+
+const getPaymentAgeSeconds = (paymentIntent) => {
+  if (!paymentIntent.created) return Number.POSITIVE_INFINITY;
+  return Math.floor(Date.now() / 1000) - paymentIntent.created;
 };
 
 const notifyMissingOrder = async (paymentIntent) => {
@@ -65,10 +74,27 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
       const format = paymentIntent.metadata?.format;
-      const hasOrder = await orderExists({
+      let hasOrder = await orderExists({
         transactionId: paymentIntent.id,
         format,
       });
+
+      if (!hasOrder) {
+        await wait(MISSING_ORDER_RECHECK_DELAY_MS);
+        hasOrder = await orderExists({
+          transactionId: paymentIntent.id,
+          format,
+        });
+      }
+
+      if (!hasOrder && getPaymentAgeSeconds(paymentIntent) < MISSING_ORDER_GRACE_SECONDS) {
+        console.warn(
+          `Stripe payment ${paymentIntent.id} succeeded before the ${format || 'unknown'} order was saved. Asking Stripe to retry before notifying.`
+        );
+        return res.status(503).json({
+          error: 'Order may still be finalizing. Retry webhook shortly.',
+        });
+      }
 
       if (!hasOrder) {
         await notifyMissingOrder(paymentIntent);

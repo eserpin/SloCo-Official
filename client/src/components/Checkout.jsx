@@ -101,6 +101,7 @@ const getOrderPayload = ({
     address: {
       ...address,
       street2: address.apartment || "",
+      country_code: countryCodes[address.country] || address.country_code || address.country,
     },
   }),
 });
@@ -417,6 +418,7 @@ export const Checkout = () => {
     state: "",
     zip: "",
     country: "US",
+    country_code: "US",
     phone: "",
   });
   const [shippingPrice, setShippingPrice] = useState(pendingCheckout?.shippingPrice ?? null);
@@ -481,6 +483,7 @@ export const Checkout = () => {
       state: getComponent("administrative_area_level_1"),
       zip: getComponent("postal_code"),
       country: getComponent("country") || "US",
+      country_code: countryCodes[getComponent("country")] || getComponent("country") || "US",
       apartment: prevAddress.apartment,
       phone: prevAddress.phone,
     }));
@@ -505,6 +508,7 @@ export const Checkout = () => {
         addressTo: {
           ...address,
           street2: address.apartment || "",
+          country_code: countryCodes[address.country] || address.country_code || address.country,
         },
         ...cartShape,
         isInternational,
@@ -541,6 +545,7 @@ export const Checkout = () => {
         address: {
           ...address,
           street2: address.apartment || "",
+          country_code: countryCodes[address.country] || address.country_code || address.country,
         },
         orderQuantities: cartShape,
         cartItems: getCartItemsForOrder(cart),

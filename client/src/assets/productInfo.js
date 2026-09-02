@@ -53,7 +53,7 @@ export const products = [
     id: "gold-foil-dragon-print",
     name: "Gold Foil Dragon Print",
     type: "Print",
-    price: 50,
+    price: 70,
     description:[
       'A pivotal moment in the story of "Nandi and the Castle in the Sea"',
       "The print is coated in a soft-touch lamination (almost suede-like), and the gold foiling is then intricately pressed onto the scales of the dragon.",

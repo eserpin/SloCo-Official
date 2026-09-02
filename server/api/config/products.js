@@ -1,6 +1,6 @@
 const PRODUCTS = {
   'nandi-book': { name: 'Nandi and the Castle in the Sea', price: 27, type: 'Graphic Novel' },
-  'gold-foil-dragon-print': { name: 'Gold Foil Dragon Print', price: 50, type: 'Print' },
+  'gold-foil-dragon-print': { name: 'Gold Foil Dragon Print', price: 70, type: 'Print' },
   'cover-print': { name: 'Nandi Cover Print', price: 15, type: 'Print' },
   'blue-dragon-print': { name: 'Blue Dragon Print', price: 15, type: 'Print' },
   'nandi-mesca-sticker': { name: 'Nandi and Mesca Sticker', price: 5, type: 'Sticker' },

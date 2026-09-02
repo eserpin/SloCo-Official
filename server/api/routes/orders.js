@@ -12,9 +12,20 @@ const normalizeAddress = (address) => {
   const normalized = { ...address };
   if (!normalized.zip && normalized.postal_code) normalized.zip = normalized.postal_code;
   if (!normalized.postal_code && normalized.zip) normalized.postal_code = normalized.zip;
-  if (!normalized.country && normalized.country_code) normalized.country = normalized.country_code;
+  if (normalized.country_code) normalized.country = normalized.country_code;
+  delete normalized.country_code;
   return normalized;
 };
+
+const serializeError = (error) => ({
+  name: error?.name,
+  message: error?.message,
+  status: error?.status || error?.statusCode,
+  code: error?.code,
+  response: error?.response?.body || error?.response?.data || error?.response,
+  details: error?.details,
+  stack: error?.stack,
+});
 
 const verifyPayment = async ({ transactionId, total, cartItems, shippingPrice, paymentProvider }) => {
   if (!transactionId || typeof transactionId !== 'string') {
@@ -244,7 +255,7 @@ router.post('/', async (req, res) => {
 
         const shipment = await shippo.shipments.create({
           addressFrom,
-          addressTo: address,
+          addressTo: { ...normalizedAddress, name },
           parcels: [parcel],
           ...(customsDeclaration && { customsDeclaration: customsDeclaration.objectId }),
         });
@@ -325,7 +336,7 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('❌ Error during order processing:');
     console.error('Error message:', error.message);
-    console.error('Full error:', JSON.stringify(error, null, 2));
+    console.error('Full error:', JSON.stringify(serializeError(error), null, 2));
     console.error('Request body was:', JSON.stringify(req.body, null, 2));
     if (savedOrder) {
       try {

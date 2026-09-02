@@ -4,6 +4,15 @@ const { getSubtotal, toCents } = require('../config/products');
 
 const router = express.Router();
 
+const normalizeAddress = (address = {}) => {
+  const normalized = { ...address };
+  if (!normalized.zip && normalized.postal_code) normalized.zip = normalized.postal_code;
+  if (!normalized.postal_code && normalized.zip) normalized.postal_code = normalized.zip;
+  if (normalized.country_code) normalized.country = normalized.country_code;
+  delete normalized.country_code;
+  return normalized;
+};
+
 router.post('/', async (req, res) => {
   const {
     name,
@@ -42,6 +51,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Digital checkout cannot include shipped items' });
     }
 
+    const normalizedAddress = normalizeAddress(address);
+    const country = normalizedAddress.country || 'US';
+    const isInternational = format === 'physical' && country !== 'US';
+
+    if (format === 'physical' && isInternational && !String(normalizedAddress.phone || '').trim()) {
+      return res.status(400).json({
+        error: 'A phone number is required for international orders so customs declarations can be completed.',
+      });
+    }
+
     const subtotal = getSubtotal(cartItems);
     const normalizedShipping = format === 'physical' ? Number(shippingPrice) : 0;
     const lineItems = cartItems
@@ -74,7 +93,7 @@ router.post('/', async (req, res) => {
         total: (subtotal + normalizedShipping).toFixed(2),
         lineItems,
         orderQuantities: JSON.stringify(orderQuantities),
-        address: address ? JSON.stringify(address) : '',
+        address: address ? JSON.stringify(normalizedAddress) : '',
       },
     });
 
