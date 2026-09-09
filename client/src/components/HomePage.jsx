@@ -58,7 +58,7 @@ export const HomePage = () => {
       <section id="sellers" class="home-page-section">
         <h2>Want to sell our book?</h2>
         <p>
-          Email us at slow.comics.publishing@gmail.com
+          Email us at contact@slowcomics.com
         </p>
       </section>
       <Footer />

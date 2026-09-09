@@ -14,12 +14,20 @@
 
   /* General Body Styles */
   body {
-    font-family: Arial, sans-serif;
+    font-family: "Boogaloo", sans-serif;
+    font-weight: 100;
+    font-style: normal;
+    font-size: 1.2rem;
     margin: 0;
     padding: 0;
     background-color: var(--wafer);
     color: var(--waikawa-gray);
   }
+  h1, h2, h3, .product-name, .title {
+  font-family: "Henny Penny", system-ui;
+  font-weight: 1000;
+  font-style: normal;
+}
 
   /* Header */
   header {
@@ -1228,7 +1236,7 @@
   display: inline-block;
   background-color: var(--waikawa-gray);
   color: var(--wafer);
-  font-weight: bold;
+  font-weight: 100;
   padding: 10px 20px;
   border-radius: 5px;
   text-align: center;

@@ -18,7 +18,7 @@ export const ThankYou = () => (
           If you purchased a digital copy, you received an email that contains a download link. The link is valid for 48 hours and can be used up to 3 times.
         </p>
         <p>
-          If you have any questions or issues, contact us at slow.comics.publishing@gmail.com and we&apos;ll get back to you as soon as possible.
+          If you have any questions or issues, contact us at contact@slowcomics.com and we&apos;ll get back to you as soon as possible.
         </p>
         <div className="thank-you-actions">
           <Link to="/" className="thank-you-primary-link">Return to Home</Link>

@@ -35,7 +35,7 @@ Check out the live website here: (https://slowcomics.com)
 ## Contact
 
 If you have any questions, feel free to reach out:
-- Email: erenserpin@gmail.com, slow.comics.publishing@gmail.com
+- Email: contact@slowcomics.com
 
 ---
 

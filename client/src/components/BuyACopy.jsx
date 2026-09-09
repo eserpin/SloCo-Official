@@ -155,7 +155,7 @@ const BuyProduct = () => {
               </select>
               {productData.id === "nandi-book" && (
                 <p className="bulk-order-note">
-                  For bulk orders, email slow.comics.publishing@gmail.com.
+                  For bulk orders, email contact@slowcomics.com.
                 </p>
               )}
             </div>
