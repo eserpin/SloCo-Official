@@ -61,8 +61,9 @@ const verifyPayment = async ({ transactionId, total, cartItems, shippingPrice, p
 
 // Place Order Route
 router.post('/', async (req, res) => {
-  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice, paymentProvider } = req.body;
+  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice, paymentProvider, orderNote } = req.body;
   const normalizedAddress = address ? normalizeAddress(address) : null;
+  const normalizedOrderNote = String(orderNote || '').trim();
 
   if (!name || !email || !total || !transactionId) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -303,7 +304,7 @@ router.post('/', async (req, res) => {
     const paypalReviewNote = paymentProvider === 'paypal'
       ? '\nManual review required: confirm this PayPal payment before shipping.\n'
       : '';
-    const adminText = `New order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}${paypalReviewNote}\nCustomer: ${name}\nEmail: ${email}\n\nShipping Address:\n${address?.street1 || ''}${address?.apartment ? '\n' + address.apartment : ''}\n${address?.city || ''}, ${address?.state || ''} ${address?.postal_code || address?.zip || ''}\n${address?.country || ''}\nPhone: ${address?.phone || 'N/A'}\n\nPurchase Details:\n${cartSummary}\n\nShipping Price: $${shippingPrice !== undefined && shippingPrice !== null ? Number(shippingPrice).toFixed(2) : '0.00'}\nTotal Charged: $${Number(total).toFixed(2)}\n\nShipping Labels: ${labelUrls.join(', ')}`;
+    const adminText = `New order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}${paypalReviewNote}\nCustomer: ${name}\nEmail: ${email}\n\nShipping Address:\n${address?.street1 || ''}${address?.apartment ? '\n' + address.apartment : ''}\n${address?.city || ''}, ${address?.state || ''} ${address?.postal_code || address?.zip || ''}\n${address?.country || ''}\nPhone: ${address?.phone || 'N/A'}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nShipping Price: $${shippingPrice !== undefined && shippingPrice !== null ? Number(shippingPrice).toFixed(2) : '0.00'}\nTotal Charged: $${Number(total).toFixed(2)}\n\nShipping Labels: ${labelUrls.join(', ')}`;
 
     const mailOptionsAdmin = {
       from: process.env.GMAIL_USER,

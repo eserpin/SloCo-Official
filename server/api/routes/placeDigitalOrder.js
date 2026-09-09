@@ -39,7 +39,8 @@ const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total 
 };
 
 router.post('/', async (req, res) => {
-  const { name, email, transactionId, cartItems, paymentProvider, total } = req.body;
+  const { name, email, transactionId, cartItems, paymentProvider, total, orderNote } = req.body;
+  const normalizedOrderNote = String(orderNote || '').trim();
 
   if (!name || !email || !transactionId || !cartItems?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -114,7 +115,7 @@ router.post('/', async (req, res) => {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',
       subject: `Digital Order Received #${transactionId}`,
-      text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nDownload link sent to customer: ${downloadLink}`,
+      text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nDownload link sent to customer: ${downloadLink}`,
     });
 
     res.status(200).json({

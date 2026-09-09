@@ -82,6 +82,7 @@ const getOrderPayload = ({
   cart,
   format,
   isInternational,
+  orderNote,
   orderQuantities,
   paymentProvider,
   shippingPrice,
@@ -96,6 +97,7 @@ const getOrderPayload = ({
   shippingPrice: format === "physical" ? shippingPrice : 0,
   transactionId,
   paymentProvider,
+  orderNote: orderNote?.trim() || "",
   cartItems: getCartItemsForOrder(cart),
   ...(format === "physical" && {
     address: {
@@ -142,6 +144,7 @@ const StripePaymentForm = ({
   format,
   isInternational,
   onOrderComplete,
+  orderNote,
   orderQuantities,
   shippingPrice,
   total,
@@ -179,6 +182,7 @@ const StripePaymentForm = ({
         cart,
         format,
         isInternational,
+        orderNote,
         orderQuantities,
         paymentProvider: "stripe",
         shippingPrice,
@@ -201,7 +205,7 @@ const StripePaymentForm = ({
       );
       setSubmitting(false);
     }
-  }, [address, cart, clearCart, currency, format, history, isInternational, onOrderComplete, orderQuantities, shippingPrice, total]);
+  }, [address, cart, clearCart, currency, format, history, isInternational, onOrderComplete, orderNote, orderQuantities, shippingPrice, total]);
 
   useEffect(() => {
     const completeRedirectPayment = async () => {
@@ -252,6 +256,7 @@ const StripePaymentForm = ({
       currency,
       format,
       isInternational,
+      orderNote,
       orderQuantities,
       shippingPrice,
       total,
@@ -317,6 +322,7 @@ const PayPalPaymentSection = ({
   format,
   isInternational,
   onOrderComplete,
+  orderNote,
   orderQuantities,
   shippingPrice,
   total,
@@ -360,6 +366,7 @@ const PayPalPaymentSection = ({
         cart,
         format,
         isInternational,
+        orderNote,
         orderQuantities,
         paymentProvider: "paypal",
         shippingPrice,
@@ -421,6 +428,7 @@ export const Checkout = () => {
     country_code: "US",
     phone: "",
   });
+  const [orderNote, setOrderNote] = useState(pendingCheckout?.orderNote || "");
   const [shippingPrice, setShippingPrice] = useState(pendingCheckout?.shippingPrice ?? null);
   const [currency] = useState("USD");
   const [loading, setLoading] = useState(false);
@@ -548,6 +556,7 @@ export const Checkout = () => {
           country_code: countryCodes[address.country] || address.country_code || address.country,
         },
         orderQuantities: cartShape,
+        orderNote,
         cartItems: getCartItemsForOrder(cart),
       });
 
@@ -564,7 +573,7 @@ export const Checkout = () => {
         setPaymentIntentLoading(false);
       }
     }
-  }, [address, canCreatePayment, cart, cartShape, currency, shippingPrice, subtotal, total]);
+  }, [address, canCreatePayment, cart, cartShape, currency, orderNote, shippingPrice, subtotal, total]);
 
   useEffect(() => {
     if (stripeReturnClientSecret || !canCreatePayment || clientSecret || paymentIntentLoading) return;
@@ -660,6 +669,22 @@ export const Checkout = () => {
           </div>
         )}
 
+        <div className="address-form">
+          <label>
+            Order Notes
+            <span className="field-description">
+              If you would like your copy personalized, please put the name you would like it signed to here. You can also leave any other notes you have for us here.
+            </span>
+            <textarea
+              name="orderNote"
+              value={orderNote}
+              onChange={(e) => setOrderNote(e.target.value)}
+              placeholder="Personalization name or order notes"
+              rows="4"
+            />
+          </label>
+        </div>
+
         {cartShape.format === "physical" ? (
           <>
             <button className="confirm-button" type="button" onClick={calculateShipping} disabled={loading}>
@@ -722,6 +747,7 @@ export const Checkout = () => {
                 format={cartShape.format}
                 isInternational={isInternational}
                 onOrderComplete={() => setOrderComplete(true)}
+                orderNote={orderNote}
                 orderQuantities={cartShape}
                 shippingPrice={shippingPrice || 0}
                 total={total}
@@ -737,6 +763,7 @@ export const Checkout = () => {
                   format={cartShape.format}
                   isInternational={isInternational}
                   onOrderComplete={() => setOrderComplete(true)}
+                  orderNote={orderNote}
                   orderQuantities={cartShape}
                   shippingPrice={shippingPrice || 0}
                   total={total}
