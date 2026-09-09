@@ -115,7 +115,7 @@ export const products = [
     id: "nandi-mesca-sticker",
     name: "Nandi and Mesca Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "The two main characters",
       "5x2.5 inches"
@@ -129,7 +129,7 @@ export const products = [
     id: "dragon-sticker",
     name: "Dragon Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "Baobavaja, the guardian spirit of Crescent Island",
       "4x4 inches"
@@ -143,7 +143,7 @@ export const products = [
     id: "timekeeper-sticker",
     name: "The Timekeeper Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "A mushroom wizard that shows you the future, but you pay with your lifespan",
       "2.5x4 inches"
@@ -157,7 +157,7 @@ export const products = [
     id: "aldren-sticker",
     name: "Aldren Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       '"The White Shark" - a Seafolk Crew Leader ',
       "3x3 inches"
@@ -171,7 +171,7 @@ export const products = [
     id: "koya-sticker",
     name: "Koya Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "The Beauty & Brains of the Smile Island Brasswork Shop",
       "1x4 inches"
@@ -185,7 +185,7 @@ export const products = [
     id: "bialla-sticker",
     name: "Bialla Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       'A foreign "princess" visiting Crescent Island',
       "1x4 inches"
@@ -199,7 +199,7 @@ export const products = [
     id: "junip-sticker",
     name: "Junip Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "Woodfolk Warrior Girl",
       "3x2 inches"
@@ -213,7 +213,7 @@ export const products = [
     id: "mimo-sticker",
     name: "Mimo Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "The Seafolk Weapons Expert",
       "4x2 inches"
@@ -227,7 +227,7 @@ export const products = [
     id: "zarago-sticker",
     name: "Zarago Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "The Woodfolk warrior-turned-villain, doing a Superman-punch",
       "3.5x2 inches"
@@ -241,7 +241,7 @@ export const products = [
     id: "carob-puka-sticker",
     name: "Carob & Puka Sticker",
     type: "Sticker",
-    price: 3,
+    price: 5,
     description:[
       "The Naturalist Explorer and his best friend",
       "3x3 inches"
