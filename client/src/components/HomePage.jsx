@@ -35,7 +35,7 @@ export const HomePage = () => {
         "Nature often seems subject to the whims of mankind, but in looking at the big picture, one may find the opposite to be true."
         </p>
         <p>
-          In the past, whenever there was a threat to the people of Crescent Island, they would receive a blessing in the form of two Gems-one Red, and one Blue.
+          In the past, whenever there was a threat to the people of Crescent Island, they would receive a blessing in the form of two Gems;one Red, and one Blue.
         </p>
         <p>
           The Red Gem would grant it's holder incredible powers, and near-immortality. However, the Gem would unleash a great, dark temptation within the bearer, to keep the power for themself. Thus, the bearer of the Blue Gem had but one responsibility; to hold their counterpart responsible. If both Gems were not returned to their rightful place, there would eventually be grave consequences for all.
@@ -44,7 +44,7 @@ export const HomePage = () => {
           In the present day however, the island is ruled by Verden, who bears the Red Gem, and has done so for the last 30 years. No one seems to know what exactly happened to the Blue Gem, or where it even is.
         </p>
         <p>
-          Verden has opened Crescent Island's borders to the world, welcoming travelers from all over to experience the island's wonders, which include exotic wildlife. homes in the trees, and a mysterious black castle that juts out of the sea, just off the shore.
+          Verden has opened Crescent Island's borders to the world, welcoming travelers from all over to experience the island's wonders, which include exotic wildlife, homes in the trees, and a mysterious black castle that juts out of the sea, just off the shore.
         </p>
         <p>
           Our story follows a young local boy named Nandi, who spends his days with his crew, catching waves and hustling tourists on the beach.
