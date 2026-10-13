@@ -108,6 +108,30 @@ const getOrderPayload = ({
   }),
 });
 
+const mergeValidatedAddress = (currentAddress, validatedAddress = {}) => ({
+  ...currentAddress,
+  ...validatedAddress,
+  apartment: validatedAddress.street2 || currentAddress.apartment,
+  country_code: validatedAddress.country || validatedAddress.country_code || currentAddress.country_code,
+  zip: validatedAddress.zip || validatedAddress.postal_code || currentAddress.zip,
+});
+
+const normalizeAddressForComparison = (address = {}) => ({
+  street1: String(address.street1 || "").trim().toLowerCase(),
+  street2: String(address.street2 || address.apartment || "").trim().toLowerCase(),
+  city: String(address.city || "").trim().toLowerCase(),
+  state: String(address.state || "").trim().toLowerCase(),
+  zip: String(address.zip || address.postal_code || "").trim().toLowerCase(),
+  country: String(address.country || address.country_code || "").trim().toLowerCase(),
+});
+
+const didShippoChangeAddress = (originalAddress, validatedAddress) => {
+  const original = normalizeAddressForComparison(originalAddress);
+  const validated = normalizeAddressForComparison(validatedAddress);
+
+  return Object.keys(validated).some((key) => validated[key] && validated[key] !== original[key]);
+};
+
 const recordPurchase = ({ cart, currency, shippingPrice, total, transactionId }) => {
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
@@ -430,6 +454,7 @@ export const Checkout = () => {
   });
   const [orderNote, setOrderNote] = useState(pendingCheckout?.orderNote || "");
   const [shippingPrice, setShippingPrice] = useState(pendingCheckout?.shippingPrice ?? null);
+  const [validatedShippingAddress, setValidatedShippingAddress] = useState(null);
   const [currency] = useState("USD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -477,7 +502,7 @@ export const Checkout = () => {
   useEffect(() => {
     if (stripeReturnClientSecret) return;
     setClientSecret(null);
-  }, [cart, shippingPrice, address.email, address.name, stripeReturnClientSecret]);
+  }, [cart, address.email, address.name, stripeReturnClientSecret]);
 
   const handleAddressSelect = (selectedPlace) => {
     const addressComponents = selectedPlace.address_components;
@@ -496,6 +521,7 @@ export const Checkout = () => {
       phone: prevAddress.phone,
     }));
     setShippingPrice(null);
+    setValidatedShippingAddress(null);
   };
 
   const calculateShipping = async () => {
@@ -512,24 +538,35 @@ export const Checkout = () => {
     setLoading(true);
 
     try {
+      const submittedAddress = {
+        ...address,
+        street2: address.apartment || "",
+        country_code: countryCodes[address.country] || address.country_code || address.country,
+      };
+
       const response = await axios.post(getApiUrl("api/shippingCalculation"), {
-        addressTo: {
-          ...address,
-          street2: address.apartment || "",
-          country_code: countryCodes[address.country] || address.country_code || address.country,
-        },
+        addressTo: submittedAddress,
         ...cartShape,
         isInternational,
       });
 
       if (response.data && response.data.totalShipping !== undefined) {
+        if (response.data.validatedAddress) {
+          setValidatedShippingAddress({
+            ...response.data.validatedAddress,
+            wasChanged: didShippoChangeAddress(submittedAddress, response.data.validatedAddress),
+          });
+          setAddress((currentAddress) =>
+            mergeValidatedAddress(currentAddress, response.data.validatedAddress)
+          );
+        }
         setShippingPrice(Number(response.data.totalShipping));
       } else {
         setError("No shipping rates available.");
       }
     } catch (error) {
       console.error("Error calculating shipping:", error);
-      setError("There was an error calculating shipping. Please make sure your address is correct.");
+      setError(error.response?.data?.details || "There was an error calculating shipping. Please make sure your address is correct.");
     } finally {
       setLoading(false);
     }
@@ -644,6 +681,7 @@ export const Checkout = () => {
                   setAddress({ ...address, phone: e.target.value });
                   setShippingPrice(null);
                   setClientSecret(null);
+                  setValidatedShippingAddress(null);
                 }}
                 required={isInternational}
               />
@@ -663,7 +701,12 @@ export const Checkout = () => {
                 type="text"
                 name="apartment"
                 value={address.apartment}
-                onChange={(e) => setAddress({ ...address, apartment: e.target.value })}
+                onChange={(e) => {
+                  setAddress({ ...address, apartment: e.target.value });
+                  setShippingPrice(null);
+                  setClientSecret(null);
+                  setValidatedShippingAddress(null);
+                }}
               />
             </label>
           </div>
@@ -703,6 +746,30 @@ export const Checkout = () => {
                 <p>
                   <strong>Total:</strong> ${total.toFixed(2)}
                 </p>
+                {validatedShippingAddress && (
+                  <div className="validated-address">
+                    <h3>Validated shipping address</h3>
+                    {validatedShippingAddress.wasChanged && (
+                      <p className="validated-address-note">
+                        We standardized your address for carrier delivery.
+                      </p>
+                    )}
+                    <p>
+                      {validatedShippingAddress.street1}
+                      {validatedShippingAddress.street2 && (
+                        <>
+                          <br />
+                          {validatedShippingAddress.street2}
+                        </>
+                      )}
+                      <br />
+                      {validatedShippingAddress.city}, {validatedShippingAddress.state}{" "}
+                      {validatedShippingAddress.zip || validatedShippingAddress.postal_code}
+                      <br />
+                      {validatedShippingAddress.country}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </>

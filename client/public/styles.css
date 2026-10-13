@@ -699,6 +699,32 @@
     margin-top: 20px;
   }
 
+  .validated-address {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid var(--conch);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--waikawa-gray);
+  }
+
+  .validated-address h3 {
+    margin: 0 0 8px;
+    color: var(--woodland);
+    font-size: 1.1rem;
+  }
+
+  .validated-address p {
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .validated-address-note {
+    margin-bottom: 10px !important;
+    color: var(--twine);
+    font-size: 0.95rem;
+  }
+
   .thank-you-page {
     min-height: calc(100vh - 220px);
     display: flex;

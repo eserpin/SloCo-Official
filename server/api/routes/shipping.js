@@ -1,24 +1,13 @@
 const express = require('express');
 const { shippo, addressFrom } = require('../config/shippo');
+const {
+  createShipments,
+  getCheapestAllowedRate,
+  normalizeAddress,
+  validateShippoAddress,
+} = require('../services/shippingFulfillment');
 
 const router = express.Router();
-
-const normalizeAddress = (address) => {
-  const normalized = { ...address };
-
-  if (!normalized.zip && normalized.postal_code) {
-    normalized.zip = normalized.postal_code;
-  }
-  if (!normalized.postal_code && normalized.zip) {
-    normalized.postal_code = normalized.zip;
-  }
-  if (normalized.country_code) {
-    normalized.country = normalized.country_code;
-  }
-  delete normalized.country_code;
-
-  return normalized;
-};
 
 router.post('/', async (req, res) => {
   const { addressTo, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational } = req.body;
@@ -40,200 +29,21 @@ router.post('/', async (req, res) => {
   console.log('📥 Incoming shipping request:', JSON.stringify(req.body, null, 2));
   console.log('🔄 Normalized addressTo:', JSON.stringify(normalizedAddressTo, null, 2));
 
-  const shipments = [];
-
   try {
-    // =========================================================
-    // 📦 1. BOOK + STICKERS (ALWAYS TOGETHER IF BOOK EXISTS)
-    // =========================================================
-    if (bookQuantity > 0) {
-      const bookWeight = 1.6 * bookQuantity;
-      const stickerWeight = 0.04 * otherPhysicalQuantity;
-      const totalWeight = bookWeight + stickerWeight;
+    const validatedAddressTo = await validateShippoAddress({
+      shippo,
+      address: normalizedAddressTo,
+    });
 
-      let lengthP = "10", widthP = "7.5", heightP = "1";
-      if (bookQuantity >= 2 && bookQuantity <= 4) {
-        lengthP = "9";
-        widthP = "9";
-        heightP = "5";
-      }
-
-      const parcel = {
-        weight: totalWeight.toFixed(2),
-        length: lengthP,
-        width: widthP,
-        height: heightP,
-        massUnit: "lb",
-        distanceUnit: "in",
-      };
-
-      let customsDeclaration = null;
-
-      if (isInternational) {
-        const items = [
-          {
-            description: "Graphic Novel",
-            quantity: bookQuantity,
-            netWeight: bookWeight.toFixed(2),
-            massUnit: "lb",
-            valueAmount: (20 * bookQuantity).toFixed(2),
-            valueCurrency: "USD",
-            originCountry: "US",
-          }
-        ];
-
-        if (otherPhysicalQuantity > 0) {
-          items.push({
-            description: "Stickers and Bookmarks",
-            quantity: otherPhysicalQuantity,
-            netWeight: stickerWeight.toFixed(2),
-            massUnit: "lb",
-            valueAmount: (10 * otherPhysicalQuantity).toFixed(2),
-            valueCurrency: "USD",
-            originCountry: "US",
-          });
-        }
-
-        customsDeclaration = await shippo.customsDeclarations.create({
-          contentsType: "MERCHANDISE",
-          contentsExplanation: "Graphic Novel and Stickers/Bookmarks",
-          nonDeliveryOption: "RETURN",
-          certify: true,
-          certifySigner: "Anil Serpin",
-          items,
-        });
-      }
-
-      const shipment = await shippo.shipments.create({
-        addressFrom,
-        addressTo: {
-          ...normalizedAddressTo,
-          name: normalizedAddressTo.name || 'Customer',
-        },
-        parcels: [parcel],
-        ...(customsDeclaration && {
-          customsDeclaration: customsDeclaration.objectId,
-        }),
-      });
-
-      shipments.push(shipment);
-
-      console.log('✅ BOOK shipment created');
-    }
-
-    // =========================================================
-    // 📦 2. STICKERS ONLY (NO BOOK)
-    // =========================================================
-    if (bookQuantity === 0 && otherPhysicalQuantity > 0) {
-      const stickerWeight = 0.04 * otherPhysicalQuantity;
-
-      const parcel = {
-        weight: stickerWeight.toFixed(2),
-        length: "6.5",
-        width: "4.5",
-        height: "1",
-        massUnit: "lb",
-        distanceUnit: "in",
-      };
-
-      let customsDeclaration = null;
-
-      if (isInternational) {
-        customsDeclaration = await shippo.customsDeclarations.create({
-          contentsType: "MERCHANDISE",
-          contentsExplanation: "Stickers and Bookmarks",
-          nonDeliveryOption: "RETURN",
-          certify: true,
-          certifySigner: "Anil Serpin",
-          items: [
-            {
-              description: "Stickers and Bookmarks",
-              quantity: otherPhysicalQuantity,
-              netWeight: stickerWeight.toFixed(2),
-              massUnit: "lb",
-              valueAmount: (10 * otherPhysicalQuantity).toFixed(2),
-              valueCurrency: "USD",
-              originCountry: "US",
-            }
-          ],
-        });
-      }
-
-      const shipment = await shippo.shipments.create({
-        addressFrom,
-        addressTo: {
-          ...normalizedAddressTo,
-          name: normalizedAddressTo.name || 'Customer',
-        },
-        parcels: [parcel],
-        ...(customsDeclaration && {
-          customsDeclaration: customsDeclaration.objectId,
-        }),
-      });
-
-      shipments.push(shipment);
-
-      console.log('✅ STICKERS shipment created');
-    }
-
-    // =========================================================
-    // 🖼 3. PRINTS (MAX 2 PER SHIPMENT)
-    // =========================================================
-    if (printQuantity > 0) {
-      const numShipments = Math.ceil(printQuantity / 2);
-
-      for (let i = 0; i < numShipments; i++) {
-        const quantityInBox = Math.min(2, printQuantity - i * 2);
-
-        const parcel = {
-          weight: "1",
-          length: "20",
-          width: "4",
-          height: "4",
-          massUnit: "lb",
-          distanceUnit: "in",
-        };
-
-        let customsDeclaration = null;
-
-        if (isInternational) {
-          customsDeclaration = await shippo.customsDeclarations.create({
-            contentsType: "MERCHANDISE",
-            contentsExplanation: "Prints",
-            nonDeliveryOption: "RETURN",
-            certify: true,
-            certifySigner: "Anil Serpin",
-            items: [
-              {
-                description: "Prints",
-                quantity: quantityInBox,
-                netWeight: "1",
-                massUnit: "lb",
-                valueAmount: "15.00",
-                valueCurrency: "USD",
-                originCountry: "US",
-              }
-            ],
-          });
-        }
-
-        const shipment = await shippo.shipments.create({
-          addressFrom,
-          addressTo: {
-            ...normalizedAddressTo,
-            name: normalizedAddressTo.name || 'Customer',
-          },
-          parcels: [parcel],
-          ...(customsDeclaration && {
-            customsDeclaration: customsDeclaration.objectId,
-          }),
-        });
-
-        shipments.push(shipment);
-
-        console.log(`✅ PRINT shipment ${i + 1} created`);
-      }
-    }
+    const shipments = await createShipments({
+      shippo,
+      addressFrom,
+      addressTo: validatedAddressTo,
+      bookQuantity,
+      otherPhysicalQuantity,
+      printQuantity,
+      isInternational,
+    });
 
     // =========================================================
     // 🚨 VALIDATION
@@ -256,13 +66,12 @@ router.post('/', async (req, res) => {
         });
       }
 
-      const filteredRates = rates.filter(
-        r => r.provider === 'UPS' || r.provider === 'USPS'
-      );
-
-      const cheapest = filteredRates.reduce((min, curr) =>
-        parseFloat(curr.amount) < parseFloat(min.amount) ? curr : min
-      );
+      const cheapest = getCheapestAllowedRate(rates);
+      if (!cheapest) {
+        return res.status(400).json({
+          error: 'No valid UPS or USPS rates found for one shipment',
+        });
+      }
 
       cheapestRates.push(cheapest);
     }
@@ -300,15 +109,17 @@ if (!isInternational) {
     return res.status(200).json({
       totalShipping,
       shippingBreakdown,
-      shipmentCount: cheapestRates.length
+      shipmentCount: cheapestRates.length,
+      validatedAddress: validatedAddressTo,
     });
 
   } catch (error) {
     console.error('❌ Shipping error:', error?.response?.body || error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       error: 'Shipping calculation failed',
       details: error.message,
+      validationResults: error.validationResults,
     });
   }
 });
