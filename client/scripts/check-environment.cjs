@@ -3,6 +3,9 @@ function checkEnvironment(env) {
   if (!env.REACT_APP_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_')) {
     throw new Error('Staging frontend requires a Stripe publishable test key.');
   }
+  if (env.REACT_APP_DISABLE_ANALYTICS !== 'true') throw new Error('Staging must disable production analytics.');
+  // The protected checkout relay must share the current deployment's origin.
+  if (env.VERCEL_ENV === 'preview' && env.REACT_APP_API_URL === '/sandbox/') return;
   let url;
   try { url = new URL(env.REACT_APP_API_URL); } catch { throw new Error('Staging requires REACT_APP_API_URL.'); }
   if (!env.STAGING_API_HOST || url.hostname !== env.STAGING_API_HOST || !url.pathname.endsWith('/')) {
@@ -11,7 +14,6 @@ function checkEnvironment(env) {
   if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
     throw new Error('Remote staging API requires HTTPS.');
   }
-  if (env.REACT_APP_DISABLE_ANALYTICS !== 'true') throw new Error('Staging must disable production analytics.');
 }
 if (require.main === module) {
   // Match CRA development precedence without loading production keys into committed files.

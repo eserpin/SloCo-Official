@@ -180,7 +180,9 @@ Recorded outcomes: [Sandbox verification results](SANDBOX_RESULTS.md).
 
 The `codex/checkout-preview` branch uses branch-specific Preview variables in both Vercel projects.
 The backend requires the isolated Neon host, Stripe/Shippo test keys, and captured email mode.
-The frontend points at its own `/sandbox/` path. Its server-side relay forwards only the four checkout
+The frontend uses `REACT_APP_API_URL=/sandbox/` so requests stay on the current deployment's origin.
+Do not use an absolute branch-alias URL: deployment URLs would make cross-origin requests that
+Vercel Authentication redirects during preflight. Its server-side relay forwards only the four checkout
 POST endpoints to the pinned backend preview, using a deployment-specific expiring share link.
 The relay returns 404 outside Vercel Preview and keeps its access token and cookie out of the browser.
 Production variables and protection settings are unchanged.
@@ -189,7 +191,7 @@ The backend share expires after seven days. To renew it, create another expiring
 intended backend preview, update only this branch's `SANDBOX_BACKEND_SHARE` (and backend URL/host if
 changing deployments), and redeploy the frontend Preview. A 502 from `/sandbox/` can indicate expired
 access. Never copy a project-wide production bypass secret into a public `REACT_APP_` variable.
-Use the frontend branch alias when testing so the API calls share its authenticated origin.
+Both the frontend branch alias and individual deployment URLs use their own authenticated origin.
 Confirmation emails are captured rather than delivered. Reader assets/downloads are outside this
 checkout-only preview configuration.
 
