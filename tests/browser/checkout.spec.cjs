@@ -49,6 +49,19 @@ test('empty checkout returns to the product page', async ({ page }) => {
   await page.goto('/checkout');
   await expect(page).toHaveURL(/\/buy\/nandi-book$/);
 });
+
+test('cart to checkout starts at the top after scrolling through the cart', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'The mobile cart places checkout below the item list.');
+  await seed(page, Array.from({ length: 8 }, (_, index) => ({ ...book, id: `book-${index}` })));
+  await page.goto('/cart');
+  const checkoutLink = page.getByRole('link', { name: 'Proceed to Checkout' });
+  await checkoutLink.scrollIntoViewIfNeeded();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  await checkoutLink.click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.getByRole('heading', { name: 'Checkout', exact: true })).toBeInViewport();
+});
 test('shipping shows standardized address and apartment edits invalidate the quote', async ({ page }) => {
   await seed(page); await mockPayments(page);
   await page.route('**/api/shippingCalculation', route => route.fulfill({ json: {

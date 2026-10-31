@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useHistory } from "react-router-dom";
 import axios from "axios";
 import { loadStripe } from "@stripe/stripe-js";
@@ -440,6 +440,9 @@ export const PayPalPaymentSection = ({
 };
 
 export const Checkout = () => {
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, []);
   const pendingCheckout = getPendingCheckout();
   const stripeReturnClientSecret = getStripeReturnClientSecret();
   const { cart } = useCart();
