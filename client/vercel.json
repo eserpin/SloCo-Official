@@ -1,1 +1,5 @@
-{}
+{
+  "rewrites": [
+    { "source": "/sandbox/api/:endpoint", "destination": "/api/sandbox-checkout?endpoint=:endpoint" }
+  ]
+}
