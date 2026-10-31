@@ -7,6 +7,8 @@ const tagManagerArgs = {
   gtmId: "GTM-5V49WGH8",
 };
 
-TagManager.initialize(tagManagerArgs);
+if (process.env.REACT_APP_DISABLE_ANALYTICS !== 'true') {
+  TagManager.initialize(tagManagerArgs);
+}
 
 ReactDOM.render(<App />, document.getElementById("root"));

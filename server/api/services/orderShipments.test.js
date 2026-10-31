@@ -9,6 +9,7 @@ test("buildOrderShipmentRecord captures label and tracking details", () => {
       paymentTransactionId: "pi_123",
       shipment: { objectId: "shipment_123" },
       transaction: {
+        status: 'SUCCESS',
         objectId: "transaction_123",
         trackingNumber: "TRACK123",
         trackingUrlProvider: "https://carrier.example/TRACK123",

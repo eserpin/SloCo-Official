@@ -1,5 +1,12 @@
 let didEnsureOrderShipmentsTable = false;
 
+const getLabelAttemptStatus = (transaction) => {
+  if (!transaction) return 'not_attempted';
+  if (!transaction.error && transaction.status === 'SUCCESS' && transaction.labelUrl && transaction.objectId) return 'label_created';
+  if (['WAITING', 'QUEUED'].includes(transaction.status)) return 'label_pending';
+  return 'label_failed';
+};
+
 const getRateServiceName = (rate = {}) =>
   rate.servicelevel?.name || rate.serviceLevel?.name || rate.servicelevel?.token || rate.serviceLevel?.token || null;
 
@@ -9,7 +16,7 @@ const buildOrderShipmentRecord = ({
   shipment,
   transaction,
   rate,
-  status = "label_created",
+  status = getLabelAttemptStatus(transaction),
   errorDetails = null,
 }) => ({
   orderId: order?.id ? String(order.id) : null,
@@ -52,7 +59,7 @@ const ensureOrderShipmentsTable = async (pool) => {
   didEnsureOrderShipmentsTable = true;
 };
 
-const saveOrderShipment = async ({ pool, record }) => {
+const saveOrderShipment = async ({ pool, record, recordId }) => {
   await ensureOrderShipmentsTable(pool);
 
   const query = `
@@ -99,8 +106,38 @@ const saveOrderShipment = async ({ pool, record }) => {
     record.errorDetails ? JSON.stringify(record.errorDetails) : null,
   ];
 
-  const { rows } = await pool.query(query, values);
+  const updateQuery = `
+    UPDATE order_shipments SET
+      order_id = $1, payment_transaction_id = $2, shippo_shipment_id = $3,
+      shippo_transaction_id = $4, carrier = $5, service = $6, tracking_number = $7,
+      tracking_url = $8, label_url = $9, status = $10,
+      customer_tracking_email_sent_at = $11, error_details = $12, updated_at = NOW()
+    WHERE id = $13 RETURNING *;
+  `;
+  const { rows } = recordId
+    ? await pool.query(updateQuery, [...values, recordId])
+    : await pool.query(query, values);
   return rows[0];
+};
+
+const getOrderFulfillment = async ({ pool, paymentTransactionId, expectedPackageCount }) => {
+  await ensureOrderShipmentsTable(pool);
+  const { rows } = await pool.query(
+    `SELECT id, status, shippo_shipment_id, shippo_transaction_id, label_url,
+            customer_tracking_email_sent_at, error_details
+     FROM order_shipments WHERE payment_transaction_id = $1 ORDER BY id`,
+    [paymentTransactionId]
+  );
+  // New attempt records retain the original count; retries cannot lower it by changing the cart.
+  const originalCounts = rows.map(row => row.error_details?.expectedPackages).filter(count => Number.isInteger(count) && count > 0);
+  const expected = originalCounts.length ? Math.max(...originalCounts) : expectedPackageCount;
+  const created = rows.filter(row => row.status === 'label_created' && row.label_url && row.shippo_transaction_id);
+  return {
+    expectedPackages: expected,
+    labelsCreated: created.length,
+    complete: expected > 0 && rows.length === expected && created.length === expected && created.every(row => row.customer_tracking_email_sent_at),
+    attempts: rows,
+  };
 };
 
 const markCustomerTrackingEmailsSent = async ({ pool, shippoTransactionIds }) => {
@@ -122,4 +159,6 @@ module.exports = {
   buildOrderShipmentRecord,
   markCustomerTrackingEmailsSent,
   saveOrderShipment,
+  getOrderFulfillment,
+  getLabelAttemptStatus,
 };

@@ -19,6 +19,8 @@
     "react-scripts": "5.0.1"
   },
   "scripts": {
+    "prestart": "node scripts/check-environment.cjs",
+    "prebuild": "node scripts/check-environment.cjs",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

@@ -13,7 +13,8 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
 import { useCart } from "./CartContext";
-import AddressForm from "./AddressForm";
+import AddressForm, { getAddressErrors } from "./AddressForm";
+import CheckoutSummary, { CheckoutTotals } from "./CheckoutSummary";
 import countryCodes from "../assets/countryCodes";
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || "");
@@ -158,7 +159,10 @@ const getSuccessMessage = (format) =>
 
 const fulfillOrder = async (payload, format) => {
   const endpoint = format === "digital" ? "api/placeDigitalOrder" : "api/placeOrder";
-  await axios.post(getApiUrl(endpoint), payload);
+  const response = await axios.post(getApiUrl(endpoint), payload);
+  if (response.status === 202) {
+    throw new Error(response.data?.error || 'Order fulfillment needs manual review.');
+  }
 };
 
 const StripePaymentForm = ({
@@ -339,7 +343,7 @@ const StripePaymentForm = ({
   );
 };
 
-const PayPalPaymentSection = ({
+export const PayPalPaymentSection = ({
   address,
   cart,
   currency,
@@ -371,7 +375,7 @@ const PayPalPaymentSection = ({
                 admin_area_2: address.city,
                 admin_area_1: address.state,
                 postal_code: address.zip,
-                country_code: countryCodes[address.country] || "US",
+                country_code: countryCodes[address.country] || address.country_code || address.country || "US",
               },
             },
           }),
@@ -462,6 +466,9 @@ export const Checkout = () => {
   const [paymentIntentLoading, setPaymentIntentLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const latestPaymentIntentKey = useRef(null);
+  const latestShippingRequest = useRef(0);
+  const checkoutFormRef = useRef(null);
+  const [addressErrors, setAddressErrors] = useState({});
 
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -488,9 +495,10 @@ export const Checkout = () => {
         format: cartShape.format,
         name: address.name,
         phone: address.phone,
+        deliveryAddress: cartShape.format === "physical" ? address : null,
         shippingPrice: cartShape.format === "physical" ? shippingPrice : 0,
       }),
-    [address.email, address.name, address.phone, cart, cartShape.format, currency, shippingPrice]
+    [address, cart, cartShape.format, currency, shippingPrice]
   );
 
   useEffect(() => {
@@ -504,34 +512,45 @@ export const Checkout = () => {
     setClientSecret(null);
   }, [cart, address.email, address.name, stripeReturnClientSecret]);
 
-  const handleAddressSelect = (selectedPlace) => {
-    const addressComponents = selectedPlace.address_components;
-    const getComponent = (type) =>
-      addressComponents.find((comp) => comp.types.includes(type))?.long_name || "";
-
-    setAddress((prevAddress) => ({
-      ...prevAddress,
-      street1: `${getComponent("street_number")} ${getComponent("route")}`.trim(),
-      city: getComponent("sublocality") || getComponent("locality"),
-      state: getComponent("administrative_area_level_1"),
-      zip: getComponent("postal_code"),
-      country: getComponent("country") || "US",
-      country_code: countryCodes[getComponent("country")] || getComponent("country") || "US",
-      apartment: prevAddress.apartment,
-      phone: prevAddress.phone,
-    }));
+  const handleAddressChange = useCallback((updates) => {
+    latestShippingRequest.current += 1;
+    latestPaymentIntentKey.current = null;
+    setAddress((previous) => ({ ...previous, ...updates }));
     setShippingPrice(null);
+    setClientSecret(null);
+    setLoading(false);
+    setPaymentIntentLoading(false);
     setValidatedShippingAddress(null);
-  };
+    setError(null);
+    setAddressErrors((previous) => {
+      const remaining = { ...previous };
+      Object.keys(updates).forEach((key) => delete remaining[key]);
+      return remaining;
+    });
+  }, []);
 
-  const calculateShipping = async () => {
+  useEffect(() => () => {
+    latestShippingRequest.current += 1;
+    latestPaymentIntentKey.current = null;
+  }, []);
+
+  const calculateShipping = async (event) => {
+    event?.preventDefault();
+    if (cartShape.format !== "physical") return;
+    const requestId = ++latestShippingRequest.current;
+    latestPaymentIntentKey.current = null;
     setError(null);
     setClientSecret(null);
-
-    if (isInternational && !address.phone.trim()) {
-      setShippingPrice(null);
-      setError(INTERNATIONAL_PHONE_REQUIRED_MESSAGE);
-      alert(INTERNATIONAL_PHONE_REQUIRED_MESSAGE);
+    setPaymentIntentLoading(false);
+    setShippingPrice(null);
+    setValidatedShippingAddress(null);
+    const fieldErrors = getAddressErrors(address);
+    if (!address.name.trim()) fieldErrors.name = "Enter your name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email.trim())) fieldErrors.email = "Enter a valid email address.";
+    if (isInternational && !address.phone.trim()) fieldErrors.phone = INTERNATIONAL_PHONE_REQUIRED_MESSAGE;
+    setAddressErrors(fieldErrors);
+    if (Object.keys(fieldErrors).length) {
+      window.requestAnimationFrame(() => checkoutFormRef.current?.querySelector('[aria-invalid="true"]')?.focus());
       return;
     }
 
@@ -550,6 +569,9 @@ export const Checkout = () => {
         isInternational,
       });
 
+      // A quote for an older address must never enable payment for the edited address.
+      if (latestShippingRequest.current !== requestId) return;
+
       if (response.data && response.data.totalShipping !== undefined) {
         if (response.data.validatedAddress) {
           setValidatedShippingAddress({
@@ -565,10 +587,11 @@ export const Checkout = () => {
         setError("No shipping rates available.");
       }
     } catch (error) {
+      if (latestShippingRequest.current !== requestId) return;
       console.error("Error calculating shipping:", error);
       setError(error.response?.data?.details || "There was an error calculating shipping. Please make sure your address is correct.");
     } finally {
-      setLoading(false);
+      if (latestShippingRequest.current === requestId) setLoading(false);
     }
   };
 
@@ -635,81 +658,61 @@ export const Checkout = () => {
       <div className="checkout-container">
         <h1 className="title">Checkout</h1>
 
-        <div className="cart-summary">
-          <h2>Order Summary</h2>
-          {cart.map((item, index) => (
-            <div key={index} className="cart-item">
-              <p>
-                {item.name} x {item.quantity} - ${(item.price * item.quantity).toFixed(2)}
-              </p>
-            </div>
-          ))}
-          <p>
-            <strong>Subtotal: ${subtotal.toFixed(2)}</strong>
-          </p>
-        </div>
+        <div className="checkout-layout">
+        <CheckoutSummary cart={cart} subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping={cartShape.format === "physical"} />
+        <div className="checkout-main">
 
+        <form id="checkout-details" ref={checkoutFormRef} onSubmit={calculateShipping} noValidate>
         <div className="address-form">
           <label>
             Name
             <input
               type="text"
               name="name"
+              autoComplete="shipping name"
               value={address.name}
-              onChange={(e) => setAddress({ ...address, name: e.target.value })}
+              onChange={(e) => handleAddressChange({ name: e.target.value })}
+              aria-invalid={Boolean(addressErrors.name)}
+              aria-describedby={addressErrors.name ? "checkout-name-error" : undefined}
               required
             />
+            {addressErrors.name && <span className="field-error" id="checkout-name-error">{addressErrors.name}</span>}
           </label>
           <label>
             Email
             <input
               type="email"
               name="email"
+              autoComplete="email"
               value={address.email}
-              onChange={(e) => setAddress({ ...address, email: e.target.value })}
+              onChange={(e) => handleAddressChange({ email: e.target.value })}
+              aria-invalid={Boolean(addressErrors.email)}
+              aria-describedby={addressErrors.email ? "checkout-email-error" : undefined}
               required
             />
+            {addressErrors.email && <span className="field-error" id="checkout-email-error">{addressErrors.email}</span>}
           </label>
           {cartShape.format === "physical" && (
             <label>
-              Phone Number
+              <span id="checkout-phone-label">Phone Number <span className="phone-label-note">(needed for international orders)</span></span>
               <input
-                type="text"
+                type="tel"
                 name="phone"
+                autoComplete="shipping tel"
                 value={address.phone}
-                onChange={(e) => {
-                  setAddress({ ...address, phone: e.target.value });
-                  setShippingPrice(null);
-                  setClientSecret(null);
-                  setValidatedShippingAddress(null);
-                }}
+                onChange={(e) => handleAddressChange({ phone: e.target.value })}
+                aria-invalid={Boolean(addressErrors.phone)}
+                aria-labelledby="checkout-phone-label"
+                aria-describedby={addressErrors.phone ? "checkout-phone-error" : undefined}
                 required={isInternational}
               />
+              {addressErrors.phone && <span className="field-error" id="checkout-phone-error">{addressErrors.phone}</span>}
             </label>
           )}
         </div>
 
         {cartShape.format === "physical" && (
-          <div className="address-form">
-            <label>
-              Address
-              <AddressForm onAddressSelect={handleAddressSelect} />
-            </label>
-            <label>
-              Apartment (Optional)
-              <input
-                type="text"
-                name="apartment"
-                value={address.apartment}
-                onChange={(e) => {
-                  setAddress({ ...address, apartment: e.target.value });
-                  setShippingPrice(null);
-                  setClientSecret(null);
-                  setValidatedShippingAddress(null);
-                }}
-              />
-            </label>
-          </div>
+          <AddressForm address={address} onChange={handleAddressChange} errors={addressErrors} />
         )}
 
         <div className="address-form">
@@ -728,24 +731,16 @@ export const Checkout = () => {
           </label>
         </div>
 
+        </form>
+
         {cartShape.format === "physical" ? (
           <>
-            <button className="confirm-button" type="button" onClick={calculateShipping} disabled={loading}>
+            <button className="confirm-button" type="submit" form="checkout-details" disabled={loading}>
               {loading ? "Calculating..." : "Calculate Shipping"}
             </button>
 
             {shippingPrice !== null && (
               <div className="shipping-details">
-                <h2>Shipping Breakdown</h2>
-                <p>
-                  <strong>Subtotal:</strong> ${subtotal.toFixed(2)}
-                </p>
-                <p>
-                  <strong>Shipping:</strong> ${shippingPrice.toFixed(2)}
-                </p>
-                <p>
-                  <strong>Total:</strong> ${total.toFixed(2)}
-                </p>
                 {validatedShippingAddress && (
                   <div className="validated-address">
                     <h3>Validated shipping address</h3>
@@ -773,10 +768,13 @@ export const Checkout = () => {
               </div>
             )}
           </>
-        ) : (
-          <p>
-            <strong>Total:</strong> ${total.toFixed(2)}
-          </p>
+        ) : null}
+
+        {cartShape.format === "physical" && shippingPrice !== null && (
+          <section className="checkout-summary checkout-mobile-payment-summary" aria-labelledby="mobile-order-total">
+            <h2 id="mobile-order-total">Order total</h2>
+            <CheckoutTotals subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping />
+          </section>
         )}
 
         {error && <p className="error">{error}</p>}
@@ -839,6 +837,8 @@ export const Checkout = () => {
             )}
           </>
         )}
+        </div>
+        </div>
       </div>
       <Footer />
     </div>

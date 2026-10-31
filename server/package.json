@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "test:sandbox": "node api/scripts/runSandboxCheckout.js",
+    "check:staging-db": "node api/scripts/checkStagingDatabase.js",
+    "start": "node api/server.js",
+    "start:staging": "node --env-file-if-exists=.env.staging.local api/scripts/startStaging.js",
     "test": "node --test",
     "test:shippo": "node api/scripts/testShippoLabel.js",
     "preview:email": "node api/scripts/previewOrderEmail.js"

@@ -2,12 +2,12 @@
 
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
 const bodyParser = require('body-parser');
 
-// Load environment variables before route/config modules read process.env.
-dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+// Check isolation before any service client is initialized.
+const { loadEnvironment, assertSafeEnvironment } = require('./config/environment');
+loadEnvironment();
+assertSafeEnvironment();
 
 const pool = require('./config/db'); // Your database configuration
 

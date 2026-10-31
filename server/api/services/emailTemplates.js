@@ -1,7 +1,8 @@
 const path = require("node:path");
+const fs = require("node:fs");
 
 const LOGO_CID = "slow-comics-logo";
-const logoPath = path.resolve(__dirname, "..", "..", "..", "client", "src", "images", "Logo.png");
+const logoPath = path.resolve(__dirname, "..", "assets", "email-logo.png");
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -65,7 +66,7 @@ const buildEmailShell = ({ title, preheader, body }) => `
 
 const getEmailLogoAttachment = () => ({
   filename: "slow-comics-logo.png",
-  path: logoPath,
+  content: fs.readFileSync(logoPath),
   cid: LOGO_CID,
 });
 

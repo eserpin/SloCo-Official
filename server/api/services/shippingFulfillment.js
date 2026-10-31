@@ -217,6 +217,7 @@ const createShipments = async ({
   otherPhysicalQuantity,
   printQuantity,
   isInternational,
+  onShipmentCreated,
 }) => {
   const normalizedAddressTo = normalizeAddress(addressTo);
   const shipmentConfigs = getShipmentConfigs({
@@ -247,6 +248,7 @@ const createShipments = async ({
     });
 
     shipments.push(shipment);
+    if (onShipmentCreated) await onShipmentCreated(shipment, shipments.length - 1);
   }
 
   return shipments;
@@ -266,6 +268,7 @@ const getCheapestAllowedRate = (rates = []) => {
 
 module.exports = {
   createShipments,
+  getShipmentConfigs,
   getCheapestAllowedRate,
   normalizeAddress,
   validateShippoAddress,

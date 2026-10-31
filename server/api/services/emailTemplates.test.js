@@ -4,7 +4,20 @@ const {
   buildAdminOrderEmail,
   buildOrderConfirmationEmail,
   getCarrierTrackingUrl,
+  getEmailLogoAttachment,
 } = require("./emailTemplates");
+
+test("email logo is a backend-local PNG included by backend-root deployment tracing", async () => {
+  const path = require("node:path");
+  const { nodeFileTrace } = require("@vercel/nft");
+  const attachment = getEmailLogoAttachment();
+  assert.equal(attachment.cid, "slow-comics-logo");
+  assert.ok(Buffer.isBuffer(attachment.content));
+  assert.equal(attachment.content.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  const result = await nodeFileTrace([require.resolve("./emailTemplates")], { base: path.resolve(__dirname, "../..") });
+  assert.ok([...result.fileList].some(file => file.replace(/\\/g, "/") === "api/assets/email-logo.png"));
+  assert.ok(![...result.fileList].some(file => file.replace(/\\/g, "/").startsWith("../client/")));
+});
 
 test("getCarrierTrackingUrl uses Shippo tracking URLs first", () => {
   assert.equal(

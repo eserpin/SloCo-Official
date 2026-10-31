@@ -8,7 +8,7 @@ const {
 
 const outputDir = path.resolve(__dirname, "..", "..", "email-previews");
 const logoAttachment = getEmailLogoAttachment();
-const logoDataUri = `data:image/png;base64,${fs.readFileSync(logoAttachment.path).toString("base64")}`;
+const logoDataUri = `data:image/png;base64,${logoAttachment.content.toString("base64")}`;
 
 const inlinePreviewImages = (html) =>
   html.replace(`cid:${logoAttachment.cid}`, logoDataUri);

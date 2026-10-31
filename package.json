@@ -1,0 +1,16 @@
+{
+  "name": "slow-comics-checks",
+  "private": true,
+  "scripts": {
+    "test:sandbox:browser": "node scripts/build-sandbox-client.cjs && node scripts/run-sandbox-browser.cjs",
+    "test": "npm --prefix server test",
+    "test:client": "npm --prefix client test -- --watchAll=false --runInBand",
+    "test:browser": "playwright test",
+    "test:browser:report": "playwright show-report",
+    "test:build": "node scripts/build-test-client.cjs",
+    "check": "npm test && npm run test:client && npm run test:build && npm run test:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
+  }
+}

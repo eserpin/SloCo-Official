@@ -7,6 +7,7 @@ const getStripe = require('../config/stripe');
 const { getSubtotal, toCents } = require('../config/products');
 const {
   createShipments,
+  getShipmentConfigs,
   getCheapestAllowedRate,
   normalizeAddress,
   validateShippoAddress,
@@ -15,6 +16,8 @@ const {
   buildOrderShipmentRecord,
   markCustomerTrackingEmailsSent,
   saveOrderShipment,
+  getOrderFulfillment,
+  getLabelAttemptStatus,
 } = require('../services/orderShipments');
 const {
   buildAdminOrderEmail,
@@ -80,7 +83,18 @@ router.post('/', async (req, res) => {
   const trackingUrls = [];
   const shipmentDetails = [];
   const shippoTransactionIds = [];
+  const packageConfigs = getShipmentConfigs({ bookQuantity, otherPhysicalQuantity, printQuantity });
+  const attempts = [];
+  let stage = 'order_recording';
   let savedOrder = null;
+
+  const persistAttempt = async (index, updates) => {
+    const previous = attempts[index];
+    const record = { ...previous, ...updates };
+    const saved = await saveOrderShipment({ pool, record, recordId: previous?.id });
+    if (!saved?.id) throw new Error(`Could not record label attempt for package ${index + 1}.`);
+    attempts[index] = { ...record, id: saved.id };
+  };
 
   try {
     await verifyPayment({ transactionId, total, cartItems, shippingPrice, paymentProvider });
@@ -91,9 +105,22 @@ router.post('/', async (req, res) => {
     );
 
     if (existingOrder.rows.length > 0) {
+      savedOrder = existingOrder.rows[0];
+      const fulfillment = await getOrderFulfillment({ pool, paymentTransactionId: transactionId, expectedPackageCount: packageConfigs.length });
+      if (!fulfillment.complete) {
+        return res.status(202).json({
+          error: 'Payment and order were recorded, but fulfillment needs manual review.',
+          orderRecorded: true,
+          orderId: savedOrder.id,
+          fulfillmentStatus: 'manual_review',
+          expectedPackages: fulfillment.expectedPackages,
+          labelsCreated: fulfillment.labelsCreated,
+        });
+      }
       return res.status(200).json({
         message: 'Order already exists for this payment.',
         order: existingOrder.rows[0],
+        fulfillmentStatus: 'fulfilled',
       });
     }
 
@@ -110,6 +137,18 @@ router.post('/', async (req, res) => {
     savedOrder = rows[0];
     console.log('✅ Order saved to database:', savedOrder);
 
+    if (!packageConfigs.length) throw new Error('No packages were provided for this physical order.');
+    // Record every expected package before contacting Shippo. A timeout/crash cannot hide an attempt.
+    for (let index = 0; index < packageConfigs.length; index++) {
+      await persistAttempt(index, buildOrderShipmentRecord({
+        order: savedOrder,
+        paymentTransactionId: transactionId,
+        status: 'not_attempted',
+        errorDetails: { packageIndex: index + 1, expectedPackages: packageConfigs.length, parcel: packageConfigs[index].parcel,
+          destination: normalizedAddress, cartItems, orderNote: normalizedOrderNote, stage: 'address_validation' },
+      }));
+    }
+    stage = 'address_validation';
     normalizedAddress = await validateShippoAddress({
       shippo,
       address: normalizedAddress,
@@ -117,6 +156,7 @@ router.post('/', async (req, res) => {
       email,
     });
 
+    stage = 'shipment_creation';
     const shipments = await createShipments({
       shippo,
       addressFrom,
@@ -126,60 +166,76 @@ router.post('/', async (req, res) => {
       otherPhysicalQuantity,
       printQuantity,
       isInternational,
+      onShipmentCreated: async (shipment, index) => {
+        await persistAttempt(index, {
+          shippoShipmentId: shipment.objectId || null,
+          errorDetails: { ...attempts[index].errorDetails, destination: normalizedAddress, stage: 'rate_selection' },
+        });
+      },
     });
 
-    for (const shipment of shipments) {
-      if (shipment.error) {
-        return res.status(400).json({ error: shipment.error.message });
-      }
-    }
-
     // Create transactions for each shipment
+    stage = 'label_purchase';
     for (let i = 0; i < shipments.length; i++) {
       const shipment = shipments[i];
-      const cheapestRate = getCheapestAllowedRate(shipment.rates);
-      if (!cheapestRate) {
-        return res.status(400).json({ error: 'No valid UPS or USPS rates found' });
-      }
-
-      const transaction = await shippo.transactions.create({
-        async: false,
-        labelFileType: "PDF_4x6",
-        metadata: `Order ID #${transactionId}`,
-        rate: cheapestRate.objectId,
-      });
-
-      if (transaction.error) {
-        return res.status(400).json({ error: transaction.error.message });
-      }
-      console.log('✅ Transaction created successfully:', transaction);
-      shipments[i]._transaction = transaction;
-      labelUrls.push(transaction.labelUrl);
-      if (transaction.trackingUrlProvider) {
-        trackingUrls.push(transaction.trackingUrlProvider);
-      }
-      if (transaction.objectId) {
-        shippoTransactionIds.push(transaction.objectId);
-      }
-
-      shipmentDetails.push({
-        carrier: cheapestRate.provider,
-        service: cheapestRate.servicelevel?.name || cheapestRate.serviceLevel?.name || 'Shipping service',
-        trackingNumber: transaction.trackingNumber || null,
-        trackingUrl: transaction.trackingUrlProvider || null,
-      });
-
-      await saveOrderShipment({
-        pool,
-        record: buildOrderShipmentRecord({
+      let cheapestRate;
+      let purchaseStarted = false;
+      let transaction;
+      try {
+        cheapestRate = getCheapestAllowedRate(shipment.rates);
+        if (shipment.error) throw new Error(shipment.error.message || 'Shippo shipment creation failed.');
+        if (!cheapestRate) throw new Error('No valid UPS or USPS rates found for this package.');
+        await persistAttempt(i, {
+          carrier: cheapestRate.provider,
+          service: cheapestRate.servicelevel?.name || cheapestRate.serviceLevel?.name || 'Shipping service',
+          status: 'label_attempting',
+          errorDetails: { ...attempts[i].errorDetails, stage: 'label_purchase' },
+        });
+        purchaseStarted = true;
+        transaction = await shippo.transactions.create({
+          async: false,
+          labelFileType: 'PDF_4x6',
+          metadata: `Order ID #${transactionId} Package ${i + 1}/${shipments.length}`,
+          rate: cheapestRate.objectId,
+        });
+        const labelStatus = getLabelAttemptStatus(transaction);
+        await persistAttempt(i, buildOrderShipmentRecord({
           order: savedOrder,
           paymentTransactionId: transactionId,
           shipment,
           transaction,
           rate: cheapestRate,
-        }),
-      });
+          status: labelStatus,
+          errorDetails: { ...attempts[i].errorDetails, shippoStatus: transaction.status || null,
+            messages: transaction.messages || [], error: transaction.error?.message || null,
+            ...(labelStatus !== 'label_created' ? { reason: `Shippo label status: ${transaction.status || 'missing'}${transaction.labelUrl ? '' : '; no label URL returned'}` } : {}),
+          },
+        }));
+        if (labelStatus !== 'label_created') continue;
+        labelUrls.push(transaction.labelUrl);
+        if (transaction.trackingUrlProvider) trackingUrls.push(transaction.trackingUrlProvider);
+        shippoTransactionIds.push(transaction.objectId);
+        shipmentDetails.push({
+          carrier: cheapestRate.provider,
+          service: attempts[i].service,
+          trackingNumber: transaction.trackingNumber || null,
+          trackingUrl: transaction.trackingUrlProvider || null,
+        });
+      } catch (error) {
+        // A network failure may occur after Shippo accepted the purchase. Never blindly repurchase.
+        await persistAttempt(i, {
+          ...(transaction ? { shippoTransactionId: transaction.objectId || null, labelUrl: transaction.labelUrl || null } : {}),
+          status: purchaseStarted ? 'label_unknown' : 'label_failed',
+          errorDetails: { ...attempts[i].errorDetails, stage: purchaseStarted ? 'label_purchase' : 'rate_selection',
+            shippoStatus: transaction?.status || null, messages: transaction?.messages || [], reason: error.message, code: error.code || null },
+        });
+      }
     }
+
+    if (attempts.some(attempt => attempt.status !== 'label_created')) {
+      throw new Error(`${labelUrls.length} of ${packageConfigs.length} package labels were created. Review the recorded Shippo attempts before retrying labels.`);
+    }
+    stage = 'confirmation_email';
 
     const cartSummary = (cartItems && cartItems.length)
       ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
@@ -248,6 +304,7 @@ router.post('/', async (req, res) => {
     // Respond with success message
     res.status(200).json({
       message: 'Order placed successfully! Labels created, emailed, and order saved.',
+      fulfillmentStatus: 'fulfilled',
     });
 
   } catch (error) {
@@ -256,12 +313,26 @@ router.post('/', async (req, res) => {
     console.error('Full error:', JSON.stringify(serializeError(error), null, 2));
     console.error('Request body was:', JSON.stringify(req.body, null, 2));
     if (savedOrder) {
+      // Preserve failures before purchase too: these have no guaranteed Shippo dashboard record.
+      for (let index = 0; index < attempts.length; index++) {
+        if (attempts[index].status === 'not_attempted') {
+          try {
+            await persistAttempt(index, { errorDetails: { ...attempts[index].errorDetails, stage, reason: error.message } });
+          } catch (saveError) { console.error('Could not update shipment attempt:', saveError.message); }
+        }
+      }
+      const attemptSummary = attempts.map((attempt, index) => {
+        const info = attempt.errorDetails || {};
+        const parcel = info.parcel || {};
+        const messages = (info.messages || []).map(message => message.text || message.message || message.code).filter(Boolean).join('; ');
+        return `Package ${index + 1}/${packageConfigs.length}: ${attempt.status}\nParcel: ${parcel.length || '?'} x ${parcel.width || '?'} x ${parcel.height || '?'} ${parcel.distanceUnit || ''}, ${parcel.weight || '?'} ${parcel.massUnit || ''}\nShippo shipment: ${attempt.shippoShipmentId || 'not created'}\nShippo transaction: ${attempt.shippoTransactionId || 'not returned; check Shippo before repurchasing'}\nShippo status: ${info.shippoStatus || 'not returned'}\nLabel: ${attempt.labelUrl || 'not available'}\nDetails: ${info.reason || messages || 'none'}${messages ? '\nCarrier messages: ' + messages : ''}`;
+      }).join('\n\n');
       try {
         await transporter.sendMail({
           from: process.env.GMAIL_USER,
           to: 'slow.comics.publishing@gmail.com',
           subject: `Manual Fulfillment Needed #${transactionId}`,
-          text: `Payment and order were recorded, but automatic fulfillment failed.\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\nReason: ${error.message}\n\nCheck Shippo/email logs and fulfill this order manually if labels were not created.`,
+          text: `Payment and order were recorded, but automatic fulfillment needs review.\n\nOrder ID: ${transactionId}\nCustomer: ${name}\nEmail: ${email}\nStage: ${stage}\nReason: ${error.message}\n\nShipping address:\n${normalizedAddress?.street1 || ''}\n${normalizedAddress?.street2 || normalizedAddress?.apartment || ''}\n${normalizedAddress?.city || ''}, ${normalizedAddress?.state || ''} ${normalizedAddress?.zip || normalizedAddress?.postal_code || ''}\n${normalizedAddress?.country || ''}\nPhone: ${normalizedAddress?.phone || 'Not provided'}\n\nOrder notes: ${normalizedOrderNote || 'None'}\n\n${attemptSummary || 'No package attempts could be saved. Check the order and Shippo before buying labels.'}\n\nKeep any successful labels. Do not charge the customer again or repurchase labels without checking Shippo.`,
         });
       } catch (mailError) {
         console.error('Manual fulfillment alert failed:', mailError);
@@ -274,7 +345,9 @@ router.post('/', async (req, res) => {
           : 'An error occurred while processing your order.',
         details: error.message,
         validationResults: error.validationResults,
-        type: error.constructor.name
+        type: error.constructor.name,
+        ...(savedOrder ? { orderRecorded: true, orderId: savedOrder.id, fulfillmentStatus: 'manual_review',
+          expectedPackages: packageConfigs.length, labelsCreated: attempts.filter(attempt => attempt.status === 'label_created').length } : {})
       });
     }
   }
