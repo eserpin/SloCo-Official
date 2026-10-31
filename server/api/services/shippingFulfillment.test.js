@@ -102,6 +102,33 @@ test("validateShippoAddress asks Shippo to validate and returns the standardized
   assert.equal(validatedAddress.postal_code, "11201");
 });
 
+test("German house number survives validation, revalidation, and shipment creation", async () => {
+  const shippo = createFakeShippo();
+  const validationRequests = [];
+  shippo.addresses.create = async (payload) => {
+    validationRequests.push(payload);
+    return { ...payload, street1: 'Brandenburgische Straße', streetNo: '38', country: 'DE' };
+  };
+  const input = { ...addressTo, street1: '38 Brandenburgische Straße', city: 'Berlin', state: 'BE', zip: '10707', country_code: 'DE' };
+  const quoted = await validateShippoAddress({ shippo, address: input });
+  assert.equal(quoted.street1, 'Brandenburgische Straße 38');
+  assert.equal(quoted.streetNo, '38');
+  const ordered = await validateShippoAddress({ shippo, address: quoted });
+  assert.equal(validationRequests[1].streetNo, '38');
+  assert.equal(ordered.street1, 'Brandenburgische Straße 38');
+  await createShipments({ shippo, addressFrom, addressTo: ordered, bookQuantity: 1, isInternational: true });
+  assert.equal(shippo.calls.shipments[0].addressTo.street1, 'Brandenburgische Straße');
+  assert.equal(shippo.calls.shipments[0].addressTo.streetNo, '38');
+});
+
+test("complete street lines retain house numbers without duplication", () => {
+  for (const street1 of ['38 Brandenburgische Straße', 'Brandenburgische Straße 38', '38A Main St', 'Main St 38A']) {
+    const streetNo = street1.includes('38A') ? '38A' : '38';
+    assert.equal(normalizeAddress({ street1, streetNo }).street1, street1);
+  }
+  assert.equal(normalizeAddress({ street1: 'Route 138', streetNo: '38' }).street1, 'Route 138 38');
+});
+
 test("validateShippoAddress rejects addresses Shippo cannot validate", async () => {
   const shippo = {
     addresses: {

@@ -12,6 +12,17 @@ class AddressValidationError extends Error {
 
 const normalizeAddress = (address = {}) => {
   const normalized = { ...address };
+  // Shippo may split German house numbers out of street1. Keep a complete
+  // street line for the form, receipts, and carriers, plus the structured number.
+  const houseNumber = String(normalized.streetNo || '').trim();
+  const street = String(normalized.street1 || '').trim();
+  if (houseNumber && street) {
+    const lowerStreet = street.toLowerCase();
+    const lowerNumber = houseNumber.toLowerCase();
+    const alreadyIncluded = lowerStreet === lowerNumber ||
+      lowerStreet.startsWith(`${lowerNumber} `) || lowerStreet.endsWith(` ${lowerNumber}`);
+    normalized.street1 = alreadyIncluded ? street : `${street} ${houseNumber}`;
+  }
 
   if (!normalized.zip && normalized.postal_code) {
     normalized.zip = normalized.postal_code;
@@ -50,11 +61,22 @@ const formatAddressValidationMessage = (validationResults = {}) => {
 
 const toShippoAddress = (address = {}) => {
   const normalized = normalizeAddress(address);
+  let street1 = normalized.street1;
+  const streetNo = String(normalized.streetNo || '').trim();
+  // Carrier labels concatenate these fields; sending the number in both prints it twice.
+  if (streetNo && street1) {
+    if (street1.toLowerCase().startsWith(`${streetNo.toLowerCase()} `)) {
+      street1 = street1.slice(streetNo.length).trim();
+    } else if (street1.toLowerCase().endsWith(` ${streetNo.toLowerCase()}`)) {
+      street1 = street1.slice(0, -streetNo.length).trim();
+    }
+  }
 
   return {
     name: normalized.name,
     company: normalized.company,
-    street1: normalized.street1,
+    street1,
+    ...(streetNo ? { streetNo } : {}),
     street2: normalized.street2 || normalized.apartment,
     street3: normalized.street3,
     city: normalized.city,
@@ -241,6 +263,10 @@ const createShipments = async ({
       addressFrom,
       addressTo: {
         ...normalizedAddressTo,
+        ...(normalizedAddressTo.streetNo ? {
+          street1: toShippoAddress(normalizedAddressTo).street1,
+          streetNo: String(normalizedAddressTo.streetNo).trim(),
+        } : {}),
         name: name || normalizedAddressTo.name || "Customer",
       },
       parcels: [shipmentConfig.parcel],

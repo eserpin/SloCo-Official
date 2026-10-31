@@ -515,7 +515,14 @@ export const Checkout = () => {
   const handleAddressChange = useCallback((updates) => {
     latestShippingRequest.current += 1;
     latestPaymentIntentKey.current = null;
-    setAddress((previous) => ({ ...previous, ...updates }));
+    setAddress((previous) => {
+      const next = { ...previous, ...updates };
+      // An edited street/country must not retain a previous validation's house number.
+      if (['street1', 'country', 'country_code'].some((key) => Object.prototype.hasOwnProperty.call(updates, key))) {
+        delete next.streetNo;
+      }
+      return next;
+    });
     setShippingPrice(null);
     setClientSecret(null);
     setLoading(false);

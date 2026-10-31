@@ -5,6 +5,7 @@ const express = require('express');
 const stub = (id, value) => { require.cache[require.resolve(id)] = { id: require.resolve(id), filename: require.resolve(id), loaded: true, exports: value }; };
 let queries, messages, labels, status, invalidAddress, failLabel, existing, paymentRequests;
 let records, labelAttempts, shipmentRequests, transactionResults, existingComplete, failShipmentAt, noRates, failCustomerMail;
+let splitGermanAddress, shipmentPayloads;
 const shipmentColumns = ['order_id', 'payment_transaction_id', 'shippo_shipment_id', 'shippo_transaction_id', 'carrier', 'service', 'tracking_number', 'tracking_url', 'label_url', 'status', 'customer_tracking_email_sent_at', 'error_details'];
 const shipmentValues = (values) => Object.fromEntries(shipmentColumns.map((name, index) => [name,
   name === 'error_details' && typeof values[index] === 'string' ? JSON.parse(values[index]) : values[index]]));
@@ -40,8 +41,10 @@ stub('../config/stripe', () => ({ paymentIntents: {
   create: async (payload) => { paymentRequests.push(payload); return { client_secret: 'mock_secret' }; },
 } }));
 stub('../config/shippo', { addressFrom: { country: 'US' }, shippo: {
-  addresses: { create: async (payload) => ({ ...payload, city: 'BROOKLYN', validationResults: { isValid: !invalidAddress } }) },
-  shipments: { create: async () => {
+  addresses: { create: async (payload) => ({ ...payload, city: 'BROOKLYN', validationResults: { isValid: !invalidAddress },
+    ...(splitGermanAddress ? { street1: 'Brandenburgische Straße', streetNo: '38', city: 'Berlin' } : {}) }) },
+  shipments: { create: async (payload) => {
+    shipmentPayloads.push(payload);
     shipmentRequests++;
     if (shipmentRequests === failShipmentAt) throw new Error('Shipment creation failed');
     return { objectId: `shipment_${shipmentRequests}`, rates: noRates ? [] : [rate] };
@@ -75,6 +78,7 @@ test.after(() => new Promise(resolve => server.close(resolve)));
 test.beforeEach(() => {
   queries = []; messages = []; labels = 0; status = 'succeeded'; invalidAddress = false; failLabel = false; existing = false; paymentRequests = [];
   records = []; labelAttempts = 0; shipmentRequests = 0; transactionResults = []; existingComplete = false; failShipmentAt = 0; noRates = false; failCustomerMail = false;
+  splitGermanAddress = false; shipmentPayloads = [];
 });
 const address = { name: 'Test Reader', email: 'reader@example.com', street1: '123 Main St', city: 'Brooklyn', state: 'NY', zip: '11201', country: 'US' };
 const item = { id: 'nandi-book', name: 'Nandi', quantity: 1, price: 27, format: 'physical', requiresShipping: true };
@@ -100,6 +104,24 @@ test('physical fulfillment persists tracking and emails customer and admin', asy
   assert.ok(queries.some(q => q.sql.includes('INSERT INTO order_shipments')));
   assert.equal(messages.length, 2);
   assert.match(messages.find(m => m.to === address.email).html, /https:\/\/example.com\/tracking/);
+});
+
+test('German quote, saved destination, and purchased-label shipment retain the house number', async () => {
+  splitGermanAddress = true;
+  const germanAddress = { ...address, street1: '38 Brandenburgische Straße', city: 'Berlin', state: 'BE', zip: '10707', country: 'DE', phone: '+493012345678' };
+  const quote = await post('/shipping', { addressTo: germanAddress, bookQuantity: 1, isInternational: true });
+  assert.equal(quote.status, 200);
+  assert.equal(quote.body.validatedAddress.street1, 'Brandenburgische Straße 38');
+  const response = await post('/orders', { ...order(), address: quote.body.validatedAddress, isInternational: true });
+  assert.equal(response.status, 200);
+  assert.equal(labelAttempts, 1);
+  for (const payload of shipmentPayloads) {
+    assert.equal(payload.addressTo.street1, 'Brandenburgische Straße');
+    assert.equal(payload.addressTo.streetNo, '38');
+  }
+  assert.equal(records[0].error_details.destination.street1, 'Brandenburgische Straße 38');
+  assert.equal(records[0].error_details.destination.streetNo, '38');
+  assert.ok(messages.some(mail => mail.html?.includes('Brandenburgische Straße 38')));
 });
 test('retrying an existing physical order does not create another label or email', async () => {
   existing = true; existingComplete = true; const response = await post('/orders', order());
