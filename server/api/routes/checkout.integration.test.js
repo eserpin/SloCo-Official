@@ -153,8 +153,19 @@ test('international payment requires a customs phone number', async () => {
 test('digital checkout stores a download token and emails the download link', async () => {
   const response = await post('/digital', { ...order(), total: 27, cartItems: [{ ...item, format: 'digital', requiresShipping: false }] });
   assert.equal(response.status, 200); assert.match(response.body.downloadLink, /api\/download\/[a-f0-9]{64}$/);
-  assert.ok(queries.some(q => q.sql.includes('INSERT INTO download_tokens')));
+  assert.ok(queries.some(q => q.sql.includes('INSERT INTO download_tokens') && /VALUES \(\$1, \$2, 4\)/.test(q.sql)));
   assert.equal(messages.length, 2); assert.equal(labels, 0);
+});
+
+test('configured digital checkout emails the website selection page and correct expiry', async () => {
+  process.env.FRONTEND_URL = 'https://shop.example/';
+  try {
+    const response = await post('/digital', { ...order(), total: 27, cartItems: [{ ...item, format: 'digital', requiresShipping: false }] });
+    assert.equal(response.status, 200);
+    assert.match(response.body.downloadLink, /^https:\/\/shop\.example\/download\/[a-f0-9]{64}$/);
+    assert.ok(messages[0].text.includes(response.body.downloadLink));
+    assert.match(messages[0].text, /4 downloads total and expires in 10 days/);
+  } finally { delete process.env.FRONTEND_URL; }
 });
 
 test('Shippo ERROR records the failed transaction and alerts admin without confirming labels', async () => {

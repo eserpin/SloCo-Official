@@ -86,7 +86,7 @@ async function digitalSuccess() {
   const orders = await pool.query('SELECT id FROM digital_orders WHERE transaction_id = $1', [paid.id]);
   assert.equal(orders.rowCount, 1);
   const tokens = await pool.query('SELECT uses_left FROM download_tokens WHERE order_id = $1', [orders.rows[0].id]);
-  assert.equal(tokens.rowCount, 1); assert.equal(tokens.rows[0].uses_left, 3);
+  assert.equal(tokens.rowCount, 1); assert.equal(tokens.rows[0].uses_left, 4);
   const emails = newMails(before);
   assert.equal(emails.length, 2); assert.ok(emails.some(mail => mail.text.includes(response.body.downloadLink)));
   const retry = await post('/api/placeDigitalOrder', { ...data, transactionId: paid.id });

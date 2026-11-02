@@ -1671,3 +1671,17 @@ html {
   border-radius: 20px;
   font-weight: 500;
 }
+/* Digital download selection */
+.download-page { max-width: 900px; margin: 48px auto 80px; padding: 0 24px; }
+.download-page h1 { margin-top: 8px; }
+.download-eyebrow { color: var(--waikawa-gray); font-weight: bold; }
+.download-allowance { margin: 28px 0; }
+.download-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.download-option { display: flex; flex-direction: column; align-items: flex-start; padding: 28px; border: 1px solid var(--conch); border-radius: 12px; background: #fff; }
+.download-option h2 { margin-bottom: 0; }
+.download-option h2, .download-option p { color: var(--waikawa-gray); }
+.download-option h2 { font-size: 1.7rem; line-height: 1.5; }
+.download-size { font-size: 1.5rem; margin: 12px 0; }
+.download-option .checkout-button { margin-top: auto; display: inline-block; text-align: center; box-sizing: border-box; }
+.download-note { font-size: .9rem; line-height: 1.6; margin-top: 28px; }
+@media (max-width: 600px) { .download-options { grid-template-columns: 1fr; } .download-page { margin-top: 28px; padding: 0 18px; } }

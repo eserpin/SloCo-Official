@@ -1,69 +1,52 @@
 const express = require('express');
-const { google } = require('googleapis');
-const pool = require('../config/db');
-
-const router = express.Router();
-
-// Setup Google Drive API
-const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.PDF_SERVICE_KEY),
-  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-});
-const drive = google.drive({ version: 'v3', auth });
-
-router.get('/:token', async (req, res) => {
-  const { token } = req.params;
-  console.log('📥 Download route called with token:', token);
-
-  try {
-    // 1. Check token validity
-    const result = await pool.query(`
-      SELECT * FROM download_tokens
-      WHERE token = $1
-      AND created_at > NOW() - INTERVAL '10 days'
-      AND uses_left > 0
-    `, [token]);
-
-    console.log('🧪 Token lookup result:', result.rows);
-
-    if (result.rows.length === 0) {
-      console.warn('⛔ Invalid or expired token');
-      return res.status(403).json({ error: 'Invalid, expired, or used download link.' });
+const databaseTokens = require('../services/downloadTokens');
+const { getDownloadUrl } = require('../config/downloadDrive');
+const { getDownloadPageLink } = require('../services/downloadLinks');
+const createDownloadRouter = (tokens = databaseTokens) => {
+  const router = express.Router();
+  const validToken = (token) => /^[a-f0-9]{64}$/i.test(token);
+  const availableVersions = () => [
+    ...(process.env.GDRIVE_SMALL_FILE_ID ? [{ id: 'standard', title: 'Standard PDF', size: '98 MB', description: 'Smaller file for Kindle, phones, and tablets.' }] : []),
+    ...(process.env.GDRIVE_FILE_ID ? [{ id: 'original', title: 'Full-resolution PDF', size: '1.2 GB', description: 'Maximum detail for large screens and zooming.' }] : []),
+  ];
+  const findToken = async (token) => {
+    if (!validToken(token)) return null;
+    return tokens.find(token);
+  };
+  const expired = (res) => res.status(403).json({ error: 'This download link is invalid, expired, or has no downloads left.' });
+  router.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+  });
+  router.get('/validate/:token', async (req, res) => {
+    try {
+      const record = await findToken(req.params.token);
+      if (!record) return expired(res);
+      return res.json({ usesLeft: record.uses_left,
+        expiresAt: new Date(new Date(record.created_at).getTime() + 10 * 86400000).toISOString(), versions: availableVersions() });
+    } catch {
+      return res.status(500).json({ error: 'Unable to check your link. Please try again.' });
     }
-
-    // 2. Decrement token usage
-    const updateRes = await pool.query(`
-      UPDATE download_tokens
-      SET uses_left = uses_left - 1
-      WHERE token = $1
-    `, [token]);
-
-    console.log('📉 Token usage decremented. Row count:', updateRes.rowCount);
-
-    // 3. Get direct download link from Google Drive
-    const fileId = process.env.GDRIVE_FILE_ID;
-    console.log('📄 Google Drive File ID:', fileId);
-
-    const { data: fileMeta } = await drive.files.get({
-      fileId,
-      fields: 'webContentLink',
-    });
-
-    const downloadUrl = fileMeta.webContentLink;
-    console.log('🔗 Redirecting to:', downloadUrl);
-
-    if (!downloadUrl) {
-      console.error('❌ No webContentLink found on file metadata');
-      return res.status(500).send('Unable to retrieve download link from Google Drive.');
+  });
+  router.get('/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const version = req.query.version;
+      if (version !== undefined && !['standard', 'original'].includes(version)) return res.status(400).json({ error: 'Choose a valid PDF version.' });
+      if (!await findToken(token)) return expired(res);
+      if (version === undefined && process.env.FRONTEND_URL) return res.redirect(getDownloadPageLink(token));
+      const fileId = version === 'standard' ? process.env.GDRIVE_SMALL_FILE_ID : process.env.GDRIVE_FILE_ID;
+      if (!fileId) return res.status(503).json({ error: 'This PDF version is not available yet.' });
+      const downloadUrl = await getDownloadUrl(fileId);
+      // Resolve Drive first; failed lookups cost no uses. Atomic reservation prevents overspending.
+      if (!await tokens.consume(token)) return expired(res);
+      return res.redirect(downloadUrl);
+    } catch {
+      return res.status(500).json({ error: 'Unable to start your download. Please try again.' });
     }
-
-    // 4. Redirect to the Google Drive download link
-    return res.redirect(downloadUrl);
-
-  } catch (err) {
-    console.error('❗ Download route error:', err);
-    return res.status(500).json({ error: 'Server error' });
-  }
-});
-
-module.exports = router;
+  });
+  return router;
+};
+module.exports = createDownloadRouter();
+module.exports.createDownloadRouter = createDownloadRouter;

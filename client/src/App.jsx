@@ -10,6 +10,7 @@ import {Gallery} from "./components/Gallery";
 import {ComicReader} from "./components/ComicReader";
 import {ReaderAuthenticate} from "./components/ReaderAuthenticate";
 import {ThankYou} from "./components/ThankYou";
+import DownloadPage from "./components/DownloadPage";
 const App = () => {
   return (
     <CartProvider>
@@ -23,6 +24,7 @@ const App = () => {
           <Route path="/products" component={ProductList} />
           <Route path="/cart" component={Cart} />
           <Route path="/checkout" component={Checkout} />
+          <Route path="/download/:token" component={DownloadPage} />
           <Route path="/read" component={ComicReader}/>
           <Route path="/readerAuth" component={ReaderAuthenticate}/>
           <Route path="/thank-you" component={ThankYou}/>

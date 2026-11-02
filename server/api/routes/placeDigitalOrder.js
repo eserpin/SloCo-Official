@@ -4,6 +4,7 @@ const transporter = require('../config/mailer');
 const crypto = require('crypto');
 const getStripe = require('../config/stripe');
 const { getSubtotal, toCents } = require('../config/products');
+const { getDownloadPageLink } = require('../services/downloadLinks');
 const router = express.Router();
 
 const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total }) => {
@@ -69,7 +70,7 @@ router.post('/', async (req, res) => {
       if (existingToken.rows.length > 0) {
         return res.status(200).json({
           message: 'Digital order already exists for this payment.',
-          downloadLink: `${process.env.BACKEND_URL}api/download/${existingToken.rows[0].token}`,
+          downloadLink: getDownloadPageLink(existingToken.rows[0].token),
         });
       }
     }
@@ -90,19 +91,18 @@ router.post('/', async (req, res) => {
     // Store token
     await pool.query(
       `INSERT INTO download_tokens (token, order_id, uses_left)
-       VALUES ($1, $2, 3)`,
+       VALUES ($1, $2, 4)`,
       [token, orderId]
     );
 
-    const downloadLink = `${process.env.BACKEND_URL}api/download/${token}`;
-    console.log("DOWNLOAD LINK- " + downloadLink);
+    const downloadLink = getDownloadPageLink(token);
 
     // Email the user
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
-      text: `Thank you for your purchase! This link is valid for 3 downloads and expires in 48 hours.\n\nDownload your book here:\n${downloadLink}\n\n`,
+      text: `Thank you for your purchase! Your link includes 4 downloads total and expires in 10 days.\n\nDownload your book here:\n${downloadLink}\n\n`,
     });
 
     const cartSummary = (cartItems && cartItems.length)
