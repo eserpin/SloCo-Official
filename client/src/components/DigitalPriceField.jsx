@@ -9,7 +9,7 @@ const DigitalPriceField = ({ value, onChange, disabled = false, idPrefix = 'digi
     <p id={`${id}-help`}>$1 minimum</p>
     <label htmlFor={id}>Your price (USD)</label>
     <div className="digital-price-input"><span aria-hidden="true">$</span><input
-      id={id} name="digitalPrice" type="number" inputMode="decimal" min="1" max={MAX_DIGITAL_PRICE} step="0.01"
+      id={id} name="digitalPrice" type="number" inputMode="decimal" min="1" max={MAX_DIGITAL_PRICE} step="1"
       value={value} onChange={event => onChange(event.target.value)} disabled={disabled} required
       aria-describedby={`${id}-help${invalid ? ` ${id}-error` : ''}`} aria-invalid={invalid}
     /></div>
