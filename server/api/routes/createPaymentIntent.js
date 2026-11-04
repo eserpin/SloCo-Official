@@ -28,12 +28,15 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Missing required checkout fields' });
   }
 
+  let cartDetails;
+  try { cartDetails = getCartDetails(cartItems); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+
   if (!process.env.STRIPE_SECRET_KEY) {
     return res.status(500).json({ error: 'Stripe is not configured' });
   }
 
   try {
-    const cartDetails = getCartDetails(cartItems);
     const hasPhysicalItems = cartItems.some(item => item.requiresShipping || item.format === 'physical');
     const hasDigitalItems = cartItems.some(item => item.format === 'digital' || item.requiresShipping === false);
 

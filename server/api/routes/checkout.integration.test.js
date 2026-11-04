@@ -190,6 +190,12 @@ test('mixed digital and physical payment is rejected', async () => {
   const response = await post('/payment', { ...order(), format: 'physical', cartItems: [item, { ...item, format: 'digital', requiresShipping: false }] });
   assert.equal(response.status, 400); assert.equal(paymentRequests.length, 0);
 });
+test('invalid bundle design returns a bad request without creating a payment', async () => {
+  const response = await post('/payment', { ...order(), cartItems: [
+    { id: 'bundle-book-sticker', choiceProductId: 'not-a-design', quantity: 1, format: 'physical', requiresShipping: true },
+  ] });
+  assert.equal(response.status, 400); assert.equal(paymentRequests.length, 0);
+});
 test('international payment requires a customs phone number', async () => {
   const response = await post('/payment', { ...order(), format: 'physical', address: { ...address, country: 'CA' } });
   assert.equal(response.status, 400); assert.equal(paymentRequests.length, 0);
