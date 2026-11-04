@@ -208,6 +208,12 @@ test('digital checkout stores a download token and emails the download link', as
   assert.equal(response.status, 200); assert.match(response.body.downloadLink, /api\/download\/[a-f0-9]{64}$/);
   assert.ok(queries.some(q => q.sql.includes('INSERT INTO download_tokens') && /VALUES \(\$1, \$2, 4\)/.test(q.sql)));
   assert.equal(messages.length, 2); assert.equal(labels, 0);
+  for (const message of messages) {
+    assert.match(message.html, /cid:slow-comics-logo/);
+    assert.match(message.html, /\$27\.00 USD/);
+    assert.ok(message.html.includes(response.body.downloadLink));
+    assert.equal(message.attachments[0].cid, 'slow-comics-logo');
+  }
 });
 
 test('configured digital checkout emails the website selection page and correct expiry', async () => {

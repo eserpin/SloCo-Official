@@ -227,7 +227,59 @@ const buildAdminOrderEmail = ({
   return { html, text };
 };
 
+const buildDigitalOrderConfirmationEmail = ({ cartSummary, amountPaidCents, downloadLink, transactionId }) => {
+  const amountPaid = `${formatCurrency(amountPaidCents / 100)} USD`;
+  return {
+    html: buildEmailShell({
+      title: 'Your digital copy is ready',
+      preheader: 'Thank you for supporting Slow Comics. Your book is ready to download.',
+      body: `
+        <p style="margin:0 0 18px; font-size:13px; color:#4a548a; overflow-wrap:anywhere;">Order #${escapeHtml(transactionId)}</p>
+        <h1 style="margin:0 0 24px; font-size:28px; line-height:1.2; color:#3e4421;">Your digital copy is ready!</h1>
+        <p style="margin:0 0 28px; font-size:15px; line-height:1.6;">Thank you for your purchase and for supporting Slow Comics. We hope you enjoy Nandi and the Castle in the Sea.</p>
+        <a href="${escapeHtml(downloadLink)}" style="display:inline-block; margin:0 0 22px; padding:14px 22px; background:#3e4421; color:#f4e9ea; text-decoration:none; font-size:14px; font-weight:700; border-radius:5px;">Download your book</a>
+        <div style="margin:0 0 28px; padding:18px; background:#f4e9ea; border:1px solid #c7dcd1; border-radius:6px;">
+          <p style="margin:0; font-size:14px; line-height:1.6;">Your link includes <strong>4 downloads total</strong> and expires in <strong>1 week</strong>. Save a copy to keep reading anytime.</p>
+        </div>
+        <h2 style="margin:0 0 10px; font-size:16px; color:#3e4421;">Order summary</h2>
+        <div style="margin:0 0 24px; font-size:14px; line-height:1.5;">${renderLineItemsHtml(cartSummary)}</div>
+        <p style="margin:0 0 28px; font-size:16px;"><strong>Amount paid:</strong> ${escapeHtml(amountPaid)}</p>
+        <p style="margin:0; font-size:14px; line-height:1.6; color:#555;">Need a hand with your download? Reply to this email and we will help.</p>
+      `,
+    }),
+    text: `Thank you for your purchase!\n\nAmount paid: ${amountPaid}\n${cartSummary}\n\nYour link includes 4 downloads total and expires in 1 week.\n\nDownload your book here:\n${downloadLink}\n\nOrder ID: ${transactionId}\n\nNeed a hand with your download? Reply to this email and we will help.`,
+  };
+};
+
+const buildAdminDigitalOrderEmail = ({ cartSummary, amountPaidCents, downloadLink, transactionId, customerName, customerEmail, paymentMethod, normalizedOrderNote }) => {
+  const amountPaid = `${formatCurrency(amountPaidCents / 100)} USD`;
+  return {
+    html: buildEmailShell({
+      title: 'New digital order received',
+      preheader: `New Slow Comics digital order — ${amountPaid}`,
+      body: `
+        <p style="margin:0 0 18px; font-size:13px; color:#4a548a; overflow-wrap:anywhere;">Order #${escapeHtml(transactionId)}</p>
+        <h1 style="margin:0 0 24px; font-size:28px; line-height:1.2; color:#3e4421;">New digital order received</h1>
+        <div style="margin:0 0 24px; padding:14px; background:#f4e9ea; border:1px solid #c7dcd1; border-radius:6px;">
+          <p style="margin:0 0 6px; font-size:13px; color:#4a548a;">Customer</p>
+          <p style="margin:0; font-size:15px; line-height:1.5; overflow-wrap:anywhere;"><strong>${escapeHtml(customerName)}</strong><br>${escapeHtml(customerEmail)}</p>
+        </div>
+        <h2 style="margin:0 0 10px; font-size:16px; color:#3e4421;">Purchase details</h2>
+        <div style="margin:0 0 24px; font-size:14px; line-height:1.5;">${renderLineItemsHtml(cartSummary)}</div>
+        <h2 style="margin:0 0 10px; font-size:16px; color:#3e4421;">Payment</h2>
+        <p style="margin:0 0 24px; font-size:14px; line-height:1.6;"><strong>Method:</strong> ${escapeHtml(paymentMethod)}<br><strong>Amount paid:</strong> ${escapeHtml(amountPaid)}</p>
+        <h2 style="margin:0 0 10px; font-size:16px; color:#3e4421;">Order notes</h2>
+        <p style="margin:0 0 24px; font-size:14px; line-height:1.5;">${escapeHtml(normalizedOrderNote || 'None provided')}</p>
+        <a href="${escapeHtml(downloadLink)}" style="color:#4a548a; font-size:14px; text-decoration:underline;">Customer download link</a>
+      `,
+    }),
+    text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${customerName}\nEmail: ${customerEmail}\nAmount paid: ${amountPaid}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nDownload link sent to customer: ${downloadLink}`,
+  };
+};
+
 module.exports = {
+  buildDigitalOrderConfirmationEmail,
+  buildAdminDigitalOrderEmail,
   buildAdminOrderEmail,
   buildOrderConfirmationEmail,
   getEmailLogoAttachment,

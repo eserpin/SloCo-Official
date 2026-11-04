@@ -4,6 +4,8 @@ const {
   buildAdminOrderEmail,
   buildOrderConfirmationEmail,
   getEmailLogoAttachment,
+  buildDigitalOrderConfirmationEmail,
+  buildAdminDigitalOrderEmail,
 } = require("../services/emailTemplates");
 
 const outputDir = path.resolve(__dirname, "..", "..", "email-previews");
@@ -75,6 +77,18 @@ const adminPath = path.join(outputDir, "admin-order-received.html");
 fs.writeFileSync(withTrackingPath, inlinePreviewImages(withTracking.html));
 fs.writeFileSync(withoutTrackingPath, inlinePreviewImages(withoutTracking.html));
 fs.writeFileSync(adminPath, inlinePreviewImages(adminEmail.html));
+
+const digitalPayload = {
+  cartSummary: '- Nandi and the Castle in the Sea (Digital) x 1 @ $3.21 = $3.21',
+  amountPaidCents: 321,
+  downloadLink: 'https://slowcomics.com/download/preview-only',
+  transactionId: 'TEST-DIGITAL-321',
+};
+fs.writeFileSync(path.join(outputDir, 'digital-order-confirmation.html'), inlinePreviewImages(buildDigitalOrderConfirmationEmail(digitalPayload).html));
+fs.writeFileSync(path.join(outputDir, 'admin-digital-order.html'), inlinePreviewImages(buildAdminDigitalOrderEmail({
+  ...digitalPayload, customerName: 'Test Reader', customerEmail: 'reader@example.com',
+  paymentMethod: 'Stripe', normalizedOrderNote: '',
+}).html));
 
 console.log(`Wrote ${withTrackingPath}`);
 console.log(`Wrote ${withoutTrackingPath}`);

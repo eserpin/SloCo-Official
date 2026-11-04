@@ -8,6 +8,7 @@ const getStripe = require('../config/stripe');
 const { getCartDetails, getCartSummary, toCents } = require('../config/products');
 const { ensureDigitalOrderAmounts } = require('../services/digitalOrderAmounts');
 const { getDownloadPageLink } = require('../services/downloadLinks');
+const { buildDigitalOrderConfirmationEmail, buildAdminDigitalOrderEmail, getEmailLogoAttachment } = require('../services/emailTemplates');
 const router = express.Router();
 
 const verifyPayment = async ({ transactionId, cartItems, cartDetails, paymentProvider, total }) => {
@@ -127,23 +128,28 @@ router.post('/', async (req, res) => {
 
     const downloadLink = getDownloadPageLink(token);
     const cartSummary = getCartSummary(cartDetails.items);
-    const amountPaid = `$${(payment.amountPaidCents / 100).toFixed(2)} USD`;
+    const confirmationEmail = buildDigitalOrderConfirmationEmail({ cartSummary,
+      amountPaidCents: payment.amountPaidCents, downloadLink, transactionId });
 
     // Email the user
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
-      text: `Thank you for your purchase!\n\nAmount paid: ${amountPaid}\n${cartSummary}\n\nYour link includes 4 downloads total and expires in 1 week.\n\nDownload your book here:\n${downloadLink}\n\n`,
+      ...confirmationEmail,
+      attachments: [getEmailLogoAttachment()],
     });
 
     const paymentMethod = paymentProvider === 'paypal' ? 'PayPal' : 'Stripe';
+    const adminEmail = buildAdminDigitalOrderEmail({ cartSummary, amountPaidCents: payment.amountPaidCents,
+      downloadLink, transactionId, customerName: name, customerEmail: email, paymentMethod, normalizedOrderNote });
 
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',
       subject: `Digital Order Received #${transactionId}`,
-      text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\nAmount paid: ${amountPaid}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nDownload link sent to customer: ${downloadLink}`,
+      ...adminEmail,
+      attachments: [getEmailLogoAttachment()],
     });
 
     await respond(200, {
