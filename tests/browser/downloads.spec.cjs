@@ -23,3 +23,10 @@ test('expired download page explains the error without showing file links', asyn
   await expect(page.getByRole('alert')).toContainText('expired');
   await expect(page.getByRole('link', { name: /^Download / })).toHaveCount(0);
 });
+
+test('download page gives a useful error when an API request returns HTML', async ({ page }) => {
+  await page.route('**/api/download/validate/*', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html></html>' }));
+  await page.goto(`/download/${token}`);
+  await expect(page.getByRole('alert')).toContainText('Please try again or reply to your order email for help');
+  await expect(page.getByRole('alert')).not.toContainText('Unexpected token');
+});

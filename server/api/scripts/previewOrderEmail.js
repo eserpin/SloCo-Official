@@ -81,14 +81,16 @@ fs.writeFileSync(adminPath, inlinePreviewImages(adminEmail.html));
 const digitalPayload = {
   cartSummary: '- Nandi and the Castle in the Sea (Digital) x 1 @ $3.21 = $3.21',
   amountPaidCents: 321,
-  downloadLink: 'https://slowcomics.com/download/preview-only',
+  downloadLink: process.env.EMAIL_PREVIEW_DOWNLOAD_URL || '#preview-download',
   transactionId: 'TEST-DIGITAL-321',
 };
-fs.writeFileSync(path.join(outputDir, 'digital-order-confirmation.html'), inlinePreviewImages(buildDigitalOrderConfirmationEmail(digitalPayload).html));
-fs.writeFileSync(path.join(outputDir, 'admin-digital-order.html'), inlinePreviewImages(buildAdminDigitalOrderEmail({
+const digitalPreview = email => inlinePreviewImages(email.html).replace('</body>',
+  process.env.EMAIL_PREVIEW_DOWNLOAD_URL ? '</body>' : '<p id="preview-download" style="padding:20px;text-align:center;font:14px Arial;color:#555;">Design preview only. Use the link in your actual order email to download your book.</p></body>');
+fs.writeFileSync(path.join(outputDir, 'digital-order-confirmation.html'), digitalPreview(buildDigitalOrderConfirmationEmail(digitalPayload)));
+fs.writeFileSync(path.join(outputDir, 'admin-digital-order.html'), digitalPreview(buildAdminDigitalOrderEmail({
   ...digitalPayload, customerName: 'Test Reader', customerEmail: 'reader@example.com',
   paymentMethod: 'Stripe', normalizedOrderNote: '',
-}).html));
+})));
 
 console.log(`Wrote ${withTrackingPath}`);
 console.log(`Wrote ${withoutTrackingPath}`);

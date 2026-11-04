@@ -12,6 +12,9 @@ const DownloadPage = () => {
     setDetails(null); setError(''); window.scrollTo(0, 0);
     fetch(`${apiBase}/api/download/validate/${encodeURIComponent(token)}`, { signal: controller.signal, cache: 'no-store' })
       .then(async (response) => {
+        if (!response.headers.get('content-type')?.includes('application/json')) {
+          throw new Error('We could not check your download link. Please try again or reply to your order email for help.');
+        }
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || 'Unable to check your download link.');
         return body;
@@ -32,6 +35,7 @@ const DownloadPage = () => {
         <a className="checkout-button" target="_blank" rel="noopener noreferrer"
           href={`${apiBase}/api/download/${encodeURIComponent(token)}?version=${version.id}`}>Download {version.title}</a>
       </section>)}</div>
+      {details.versions.length === 0 && <p role="alert">Downloads are temporarily unavailable. Please reply to your order email for help.</p>}
       <p className="download-note">Each download uses one of your remaining downloads, whichever version you choose. Opening this page does not use a download. Refresh this page after downloading to see your updated allowance.</p>
     </>}
   </main><Footer /></>;

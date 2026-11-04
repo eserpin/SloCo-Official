@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/sandbox/api/download/validate/:token", "destination": "/api/sandbox-checkout?endpoint=download-validate&token=:token" },
+    { "source": "/sandbox/api/download/:token", "destination": "/api/sandbox-checkout?endpoint=download&token=:token" },
     { "source": "/sandbox/api/:endpoint", "destination": "/api/sandbox-checkout?endpoint=:endpoint" }
   ]
 }
