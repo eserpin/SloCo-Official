@@ -168,7 +168,7 @@ All four bundles passed from deployed shop selection through cart, address entry
 
 Deployed Ambassador tests sent five competing requests during the browser's fulfillment request. All five competitors returned `409 ORDER_PROCESSING`; the original succeeded. Saved rows, labels and SMTP logs showed no duplicates. Completed-order retries also passed. The test found invalid bundle designs returned HTTP 500; the final commit fixes this to HTTP 400 before payment creation. Deployed negative checks then passed for invalid designs (400), mixed digital/physical carts (400), and a declined card (fulfillment rejected, no order or labels). Public JavaScript did not contain the configured database, Stripe secret, Shippo or Kit key. All 109 backend regressions passed after the fix.
 
-These automated browser purchases used **Stripe sandbox API confirmation followed by the real Stripe.js return flow**, with no SDK or endpoint mocks. They do not establish direct card-entry/Pay-button completion. A separate actual card-entry attempt was blocked by Stripe's hCaptcha screen; the unpaid test PaymentIntent was canceled after verifying no order existed. A deployed manual card-entry test was requested from the user and remains pending. PayPal buyer testing is deferred at the user's request. Actual book-file downloads remain outside this bundle verification.
+These automated browser purchases used **Stripe sandbox API confirmation followed by the real Stripe.js return flow**, with no SDK or endpoint mocks. They do not establish direct card-entry/Pay-button completion. A separate automated card-entry attempt was blocked by Stripe's hCaptcha screen; the unpaid test PaymentIntent was canceled after verifying no order existed. The subsequent user-operated deployed card checkout passed, as independently verified below. PayPal buyer testing is deferred at the user's request. Actual book-file downloads remain outside this bundle verification.
 
 Ignored evidence directories under `server/sandbox-results/`:
 
@@ -179,3 +179,15 @@ Ignored evidence directories under `server/sandbox-results/`:
 - `deployed-307bb854-14c4-48c3-b9bd-d8d81f1a857a`: blocked card-entry attempt and hCaptcha frame diagnostics. Raw diagnostics contain test client secrets; do not publish them.
 
 Production deployment IDs and main commit were independently checked and remain `dpl_AWNWKy48ufn417b8pe3gM1p7YGbQ` / `dpl_GbfdHc7yLVkQvA6gf5s8Cbft8LzE`, commit `a07ea664fff7f31b736bfe76a7881a4a8d4fcb60`. No production deployment, live charge, or production database write occurred. Frontend and backend share links expire; renew the backend link and redeploy the frontend relay if preview access expires.
+
+### User-operated deployed card checkout — November 4, 2026
+
+The user completed a test-card purchase in the deployed preview and reported reaching `/thank-you`. Independent Stripe, database, Shippo and runtime-log read-back verified:
+
+- Payment `pi_3UXzT2Ajoj6fyL5z0w75RxMs`: `succeeded`, `livemode=false`, USD 148.63 received ($142 items + $6.63 shipping). No automated-run metadata; this is the user-operated purchase.
+- Exactly one order, `a1553339-d499-4f7e-9778-cc199e12e07a`. Cart contained Book + Sticker (Nandi/Mesca design), Book + Collectible Gold Foil Print, one standalone Dragon Sticker, and one standalone book. Expanded contents: three books, two stickers and one print.
+- Exactly two saved `label_created` shipments; both independently retrieved as Shippo test-mode SUCCESS transactions. Both label PDFs downloaded with valid PDF signatures, tracking URLs present, and customer tracking-email timestamps recorded. No processing claim remained.
+- The same deployed request logged exactly two SMTP acceptances, no rejected recipients, and successful customer/admin confirmations. Test SMTP remained restricted to erenserpin@gmail.com.
+- The order's affirmative mailing-list consent was recorded as `synced`, with Kit subscriber state `active`.
+
+This completes the requested deployed bundle checkout checks, including the manual card-entry path. The assistant did not independently inspect the user's final browser cart state; automated deployed return-flow tests separately verified cart clearing. Detailed read-back is in ignored `server/sandbox-results/deployed-manual-bundle-verification.json`. Production release is still separate; PayPal remains deferred.
