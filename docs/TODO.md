@@ -2,7 +2,7 @@
 
 Updated November 3, 2026. Work in this priority order.
 
-## 1. Bundles — implemented locally; awaiting release
+## 1. Bundles — released November 4, 2026
 
 - Book + Collectible Gold Foil Print: $80 ($97 value).
 - Book + any sticker: $30 ($32 value).
@@ -17,7 +17,7 @@ Implementation includes server-calculated prices, selected designs and shipping 
 
 Print packaging: up to five prints per package, always separate from the book package. One Ambassador Bundle uses two packages (book/stickers and prints).
 
-Validation: backend/React regressions, production build, desktop/mobile browser checks, and actual Stripe/Shippo/staging-database bundle runs passed. November 4 deployed Preview tests passed all four bundles, Canadian Ambassador shipping, order/label creation, browser Stripe returns, thank-you/cart clearing, SMTP sending, duplicate retries, and simultaneous requests. The user confirmed receipt inbox arrival and correct contents/links. A user-operated deployed mixed bundle/standalone card purchase also passed independent payment, order, label, SMTP and Kit-consent read-back. Fixed an international customs-description rejection and invalid bundle-choice HTTP status. Requested bundle verification is complete; PayPal buyer testing is deferred. Production release remains pending. Details: [Sandbox results](SANDBOX_RESULTS.md#deployed-preview-verification--november-4-2026).
+Validation: backend/React regressions, production build, desktop/mobile browser checks, and actual Stripe/Shippo/staging-database bundle runs passed. Deployed Preview tests passed all four bundles, Canadian shipping, orders/labels, browser Stripe returns, thank-you/cart clearing, SMTP delivery, duplicate retries, and simultaneous requests. A user-operated deployed mixed bundle/standalone card purchase passed independent payment, order, label, SMTP and Kit-consent read-back. Released to main and both production projects November 4; public-site bundle selection/cart and both signup checkboxes passed smoke checks, with live Stripe settings and no client errors. PayPal buyer testing remains deferred. Details: [Sandbox results](SANDBOX_RESULTS.md#production-release--november-4-2026).
 
 ## 2. Pay what you want for digital downloads — queued
 
@@ -34,10 +34,10 @@ Validation: backend/React regressions, production build, desktop/mobile browser 
 - Review existing `order_shipments` data before adding any necessary order/shipping fields.
 - Consider editable internal notes and handled/needs-attention markers.
 
-## Mailing list — Kit integrated and tested locally; awaiting release
+## Mailing list — released November 4, 2026
 
 - Add an optional, unchecked checkbox to both physical and direct digital checkout: "Subscribe to our email list to be notified about future projects."
 - Subscribe only customers who opt in; retain consent and avoid duplicate subscriptions on payment/order retries.
 - Keep a mailing-list service failure from blocking a successful purchase; retain the signup for retry.
 - Use the provider for announcements and unsubscribe management. Existing order/download emails remain independent of marketing opt-in.
-- Kit chosen: Slow Comics, slow.comics.publishing@gmail.com. Backend integration, consent records and manual retry command implemented; see [mailing list setup](MAILING_LIST.md). Replacement V4 key verified against the Slow Comics account; test signup for erenserpin@gmail.com synced and independently read back as active. Repeated signup did not make another Kit submission. The user's deployed Preview checkout also recorded and synced affirmative consent. No welcome email/sequence configured. Production deployment remains pending.
+- Kit chosen: Slow Comics, slow.comics.publishing@gmail.com. Backend integration, consent records and manual retry command implemented; see [mailing list setup](MAILING_LIST.md). Test signup and the user's deployed Preview checkout synced affirmative consent; duplicate retries did not resubmit. The user explicitly approved the production Kit key, which was configured before the November 4 release. Both production checkouts show the optional unchecked signup box. No welcome email/sequence configured.

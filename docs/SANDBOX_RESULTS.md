@@ -191,3 +191,14 @@ The user completed a test-card purchase in the deployed preview and reported rea
 - The order's affirmative mailing-list consent was recorded as `synced`, with Kit subscriber state `active`.
 
 This completes the requested deployed bundle checkout checks, including the manual card-entry path. The assistant did not independently inspect the user's final browser cart state; automated deployed return-flow tests separately verified cart clearing. Detailed read-back is in ignored `server/sandbox-results/deployed-manual-bundle-verification.json`. Production release is still separate; PayPal remains deferred.
+
+## Production release — November 4, 2026
+
+The user authorized pushing the tested changes live and specifically approved copying the tested Kit key into the existing production backend. A read-only production database preflight confirmed the order/token/shipment tables and permission to create the new processing-claim and consent tables. Other production credentials were preserved; Preview-only database/payment/mail settings were not copied into production.
+
+Released the backend first, verified its public API rejected an invalid bundle choice with HTTP 400 without creating a payment, then fast-forwarded main to application commit `d2becbb8df28c6437847c647d116bdfc2bd5fcee` and pushed. Both automatic main deployments reached production READY:
+
+- Backend: `dpl_7Br4Ph9wwriXVAPt4KaMdjPpGPaA` at https://slo-co-official.vercel.app.
+- Frontend: `dpl_9vm9Me7Dva56AtkVkXM3CWdaTNUj` at https://slowcomics.com.
+
+Production browser smoke checks confirmed four bundle cards, selecting a base-print design, adding it to the cart, entering checkout, and optional unchecked mailing-list boxes on both physical and direct digital checkout. The public build uses a live Stripe publishable key, contains no configured sandbox endpoint or literal server secret, and produced no client exceptions. These post-release checks did not create a live customer payment, order or shipping label. PayPal remains deferred. The release-record follow-up changes only documentation.
