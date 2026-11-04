@@ -213,7 +213,7 @@ test('pay what you wish starts blank and accepts amounts from $1 through $10,000
   expect(requests).toHaveLength(0);
   for (const value of ['0.99', '-1', '20.001', '10000.01', '1e3']) {
     await price.fill(value);
-    await expect(page.getByText('Enter between $1 and $10,000, with up to two decimal places.')).toBeVisible();
+    await expect(page.getByText('Please provide an acceptable amount with up to 2 decimal places')).toBeVisible();
     await expect(page.getByRole('button', { name: /^Pay \$/ })).toHaveCount(0);
   }
   for (const value of ['1.00', '10000.00', '23.45']) {
