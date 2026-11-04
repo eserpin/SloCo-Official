@@ -6,7 +6,7 @@ const DigitalPriceField = ({ value, onChange, disabled = false, idPrefix = 'digi
   const id = `${idPrefix}-price`;
   return <section className="digital-price-choice" aria-labelledby={`${id}-heading`}>
     <h2 id={`${id}-heading`}>Pay what you wish</h2>
-    <p id={`${id}-help`}>$1 minimum. Choose the amount that works for you.</p>
+    <p id={`${id}-help`}>$1 minimum</p>
     <label htmlFor={id}>Your price (USD)</label>
     <div className="digital-price-input"><span aria-hidden="true">$</span><input
       id={id} name="digitalPrice" type="number" inputMode="decimal" min="1" max={MAX_DIGITAL_PRICE} step="0.01"
