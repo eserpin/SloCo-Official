@@ -1,3 +1,5 @@
+const { recordNewsletterConsent } = require('../services/newsletter');
+const { acquireOrderProcessingLock } = require('../services/orderProcessingLock');
 const express = require('express');
 const pool = require('../config/db');
 const transporter = require('../config/mailer');
@@ -42,6 +44,15 @@ const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total 
 router.post('/', async (req, res) => {
   const { name, email, transactionId, cartItems, paymentProvider, total, orderNote } = req.body;
   const normalizedOrderNote = String(orderNote || '').trim();
+  let releaseProcessingLock;
+  const respond = async (status, body) => {
+    if (releaseProcessingLock) {
+      const release = releaseProcessingLock;
+      releaseProcessingLock = null;
+      await release();
+    }
+    return res.status(status).json(body);
+  };
 
   if (!name || !email || !transactionId || !cartItems?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -49,15 +60,22 @@ router.post('/', async (req, res) => {
 
   try {
     await verifyPayment({ transactionId, cartItems, paymentProvider, total });
+    releaseProcessingLock = await acquireOrderProcessingLock({ pool, transactionId });
+    if (!releaseProcessingLock) {
+      return res.status(409).json({ error: 'This payment is already being processed. Please wait before retrying. If this persists, contact us.', code: 'ORDER_PROCESSING' });
+    }
 
     const existingOrder = await pool.query(
-      'SELECT id FROM digital_orders WHERE transaction_id = $1 LIMIT 1',
+      'SELECT id, name, email FROM digital_orders WHERE transaction_id = $1 LIMIT 1',
       [transactionId]
     );
 
     let orderId = existingOrder.rows[0]?.id;
 
     if (orderId) {
+      await recordNewsletterConsent({ optedIn: req.body.newsletterOptIn,
+        email: existingOrder.rows[0].email || email, name: existingOrder.rows[0].name || name,
+        transactionId, source: 'digital' });
       const existingToken = await pool.query(
         `SELECT token FROM download_tokens
          WHERE order_id = $1
@@ -68,7 +86,7 @@ router.post('/', async (req, res) => {
       );
 
       if (existingToken.rows.length > 0) {
-        return res.status(200).json({
+        return await respond(200, {
           message: 'Digital order already exists for this payment.',
           downloadLink: getDownloadPageLink(existingToken.rows[0].token),
         });
@@ -83,6 +101,8 @@ router.post('/', async (req, res) => {
       );
 
       orderId = orderResult.rows[0].id;
+      await recordNewsletterConsent({ optedIn: req.body.newsletterOptIn,
+        email, name, transactionId, source: 'digital' });
     }
 
     // Generate token
@@ -102,7 +122,7 @@ router.post('/', async (req, res) => {
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
-      text: `Thank you for your purchase! Your link includes 4 downloads total and expires in 10 days.\n\nDownload your book here:\n${downloadLink}\n\n`,
+      text: `Thank you for your purchase! Your link includes 4 downloads total and expires in 1 week.\n\nDownload your book here:\n${downloadLink}\n\n`,
     });
 
     const cartSummary = (cartItems && cartItems.length)
@@ -118,14 +138,19 @@ router.post('/', async (req, res) => {
       text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nDownload link sent to customer: ${downloadLink}`,
     });
 
-    res.status(200).json({
+    await respond(200, {
       message: 'Order placed successfully. Download link sent via email.',
       downloadLink,
     });
 
   } catch (err) {
     console.error('Order error:', err);
-    res.status(500).json({ error: 'Server error processing order.' });
+    await respond(500, { error: 'Server error processing order.' });
+  } finally {
+    if (releaseProcessingLock) {
+      try { await releaseProcessingLock(); }
+      catch { console.error('Order processing claim needs review:', transactionId); }
+    }
   }
 });
 

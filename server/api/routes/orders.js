@@ -1,10 +1,12 @@
+const { recordNewsletterConsent } = require('../services/newsletter');
+const { acquireOrderProcessingLock } = require('../services/orderProcessingLock');
 // routes/order.js
 const express = require('express');
 const pool = require('../config/db'); // Import the database pool
 const { shippo, addressFrom } = require('../config/shippo');
 const transporter = require('../config/mailer'); // Import the email transporter from mailer.js
 const getStripe = require('../config/stripe');
-const { getSubtotal, toCents } = require('../config/products');
+const { getSubtotal, getCartDetails, getCartSummary, toCents } = require('../config/products');
 const {
   createShipments,
   getShipmentConfigs,
@@ -71,8 +73,13 @@ const verifyPayment = async ({ transactionId, total, cartItems, shippingPrice, p
 
 // Place Order Route
 router.post('/', async (req, res) => {
-  const { name, email, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational, total, transactionId, address, cartItems, shippingPrice, paymentProvider, orderNote } = req.body;
+  const { name, email, total, transactionId, address, shippingPrice, paymentProvider, orderNote } = req.body;
+  let details;
+  try { details = getCartDetails(req.body.cartItems); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  const { items: cartItems, quantities: { bookQuantity, otherPhysicalQuantity, printQuantity } } = details;
   let normalizedAddress = address ? normalizeAddress(address) : null;
+  const isInternational = normalizedAddress?.country !== 'US';
   const normalizedOrderNote = String(orderNote || '').trim();
 
   if (!name || !email || !total || !transactionId) {
@@ -87,6 +94,15 @@ router.post('/', async (req, res) => {
   const attempts = [];
   let stage = 'order_recording';
   let savedOrder = null;
+  let releaseProcessingLock;
+  const respond = async (status, body) => {
+    if (releaseProcessingLock) {
+      const release = releaseProcessingLock;
+      releaseProcessingLock = null;
+      await release();
+    }
+    return res.status(status).json(body);
+  };
 
   const persistAttempt = async (index, updates) => {
     const previous = attempts[index];
@@ -98,6 +114,10 @@ router.post('/', async (req, res) => {
 
   try {
     await verifyPayment({ transactionId, total, cartItems, shippingPrice, paymentProvider });
+    releaseProcessingLock = await acquireOrderProcessingLock({ pool, transactionId });
+    if (!releaseProcessingLock) {
+      return res.status(409).json({ error: 'This payment is already being processed. Please wait before retrying. If this persists, contact us.', code: 'ORDER_PROCESSING' });
+    }
 
     const existingOrder = await pool.query(
       'SELECT * FROM orders WHERE transaction_id = $1 LIMIT 1',
@@ -106,9 +126,11 @@ router.post('/', async (req, res) => {
 
     if (existingOrder.rows.length > 0) {
       savedOrder = existingOrder.rows[0];
+      await recordNewsletterConsent({ optedIn: req.body.newsletterOptIn,
+        email: savedOrder.email || email, name: savedOrder.name || name, transactionId, source: 'physical' });
       const fulfillment = await getOrderFulfillment({ pool, paymentTransactionId: transactionId, expectedPackageCount: packageConfigs.length });
       if (!fulfillment.complete) {
-        return res.status(202).json({
+        return await respond(202, {
           error: 'Payment and order were recorded, but fulfillment needs manual review.',
           orderRecorded: true,
           orderId: savedOrder.id,
@@ -117,7 +139,7 @@ router.post('/', async (req, res) => {
           labelsCreated: fulfillment.labelsCreated,
         });
       }
-      return res.status(200).json({
+      return await respond(200, {
         message: 'Order already exists for this payment.',
         order: existingOrder.rows[0],
         fulfillmentStatus: 'fulfilled',
@@ -135,6 +157,8 @@ router.post('/', async (req, res) => {
       throw new Error('Order was not saved in the database.');
     }
     savedOrder = rows[0];
+    await recordNewsletterConsent({ optedIn: req.body.newsletterOptIn,
+      email, name, transactionId, source: 'physical' });
     console.log('✅ Order saved to database:', savedOrder);
 
     if (!packageConfigs.length) throw new Error('No packages were provided for this physical order.');
@@ -237,9 +261,7 @@ router.post('/', async (req, res) => {
     }
     stage = 'confirmation_email';
 
-    const cartSummary = (cartItems && cartItems.length)
-      ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
-      : `Books: ${bookQuantity}\nStickers/Bookmarks: ${otherPhysicalQuantity}\nPrints: ${printQuantity}`;
+    const cartSummary = getCartSummary(cartItems);
     const shippingAddressText = `${normalizedAddress?.street1 || ''}${normalizedAddress?.street2 ? '\n' + normalizedAddress.street2 : ''}\n${normalizedAddress?.city || ''}, ${normalizedAddress?.state || ''} ${normalizedAddress?.postal_code || normalizedAddress?.zip || ''}\n${normalizedAddress?.country || ''}`;
 
     const paymentMethod = paymentProvider === 'paypal' ? 'PayPal' : 'Stripe';
@@ -302,7 +324,7 @@ router.post('/', async (req, res) => {
     }
 
     // Respond with success message
-    res.status(200).json({
+    await respond(200, {
       message: 'Order placed successfully! Labels created, emailed, and order saved.',
       fulfillmentStatus: 'fulfilled',
     });
@@ -339,7 +361,7 @@ router.post('/', async (req, res) => {
       }
     }
     if (!res.headersSent) {
-      res.status(savedOrder ? 202 : error.statusCode || 500).json({
+      await respond(savedOrder ? 202 : error.statusCode || 500, {
         error: savedOrder
           ? 'Payment and order were recorded, but fulfillment needs manual review.'
           : 'An error occurred while processing your order.',
@@ -349,6 +371,11 @@ router.post('/', async (req, res) => {
         ...(savedOrder ? { orderRecorded: true, orderId: savedOrder.id, fulfillmentStatus: 'manual_review',
           expectedPackages: packageConfigs.length, labelsCreated: attempts.filter(attempt => attempt.status === 'label_created').length } : {})
       });
+    }
+  } finally {
+    if (releaseProcessingLock) {
+      try { await releaseProcessingLock(); }
+      catch { console.error('Order processing claim needs review:', transactionId); }
     }
   }
 });

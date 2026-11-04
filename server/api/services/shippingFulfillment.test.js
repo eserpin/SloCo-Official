@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
   createShipments,
+  getShipmentConfigs,
   getCheapestAllowedRate,
   normalizeAddress,
   validateShippoAddress,
@@ -197,7 +198,7 @@ test("createShipments builds the book and sticker package used by quotes and ord
   });
 });
 
-test("createShipments builds one print shipment for every two prints", async () => {
+test("createShipments builds one print shipment for every five prints", async () => {
   const shippo = createFakeShippo();
   await createShipments({
     shippo,
@@ -205,7 +206,7 @@ test("createShipments builds one print shipment for every two prints", async () 
     addressTo,
     bookQuantity: 0,
     otherPhysicalQuantity: 0,
-    printQuantity: 3,
+    printQuantity: 6,
     isInternational: false,
   });
 
@@ -231,6 +232,27 @@ test("createShipments builds one print shipment for every two prints", async () 
       },
     ]
   );
+});
+
+for (const [printQuantity, expected] of [[1, [1]], [5, [5]], [6, [5, 1]], [10, [5, 5]], [11, [5, 5, 1]]]) {
+  test(`${printQuantity} prints pack in groups of five, separately from books`, () => {
+    const configs = getShipmentConfigs({ bookQuantity: 1, otherPhysicalQuantity: 2, printQuantity });
+    const prints = configs.filter(config => config.customs.contentsExplanation === 'Prints');
+    assert.equal(configs.length, expected.length + 1);
+    assert.deepEqual(prints.map(config => config.customs.items[0].quantity), expected);
+    assert.equal(configs[0].customs.items.some(item => item.description === 'Prints'), false);
+    assert.equal(prints.some(config => config.customs.items.some(item => item.description !== 'Prints')), false);
+  });
+}
+
+test('customs package descriptions fit the USPS 25-character limit', () => {
+  for (const quantities of [{ bookQuantity: 1 }, { bookQuantity: 1, otherPhysicalQuantity: 10, printQuantity: 3 }, { otherPhysicalQuantity: 1 }]) {
+    for (const config of getShipmentConfigs(quantities)) {
+      assert.ok(config.customs.contentsExplanation.length <= 25);
+    }
+  }
+  assert.equal(getShipmentConfigs({ bookQuantity: 1 })[0].customs.contentsExplanation, 'Graphic novel');
+  assert.equal(getShipmentConfigs({ bookQuantity: 1, otherPhysicalQuantity: 1 })[0].customs.contentsExplanation, 'Books and stickers');
 });
 
 test("createShipments includes NOEEI customs declarations for international shipments", async () => {

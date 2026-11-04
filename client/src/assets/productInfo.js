@@ -51,7 +51,7 @@ export const products = [
   },
   {
     id: "gold-foil-dragon-print",
-    name: "Gold Foil Dragon Print",
+    name: "Collectible Gold Foil Print",
     type: "Print",
     price: 70,
     description:[

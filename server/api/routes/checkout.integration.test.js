@@ -3,6 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 const stub = (id, value) => { require.cache[require.resolve(id)] = { id: require.resolve(id), filename: require.resolve(id), loaded: true, exports: value }; };
+let newsletterCalls;
+let processingLocks, digitalOrder, digitalTokens, mailGate;
 let queries, messages, labels, status, invalidAddress, failLabel, existing, paymentRequests;
 let records, labelAttempts, shipmentRequests, transactionResults, existingComplete, failShipmentAt, noRates, failCustomerMail;
 let splitGermanAddress, shipmentPayloads;
@@ -11,6 +13,15 @@ const shipmentValues = (values) => Object.fromEntries(shipmentColumns.map((name,
   name === 'error_details' && typeof values[index] === 'string' ? JSON.parse(values[index]) : values[index]]));
 const pool = { query: async (sql, values) => {
   queries.push({ sql, values });
+  if (sql.includes('INSERT INTO order_processing_locks')) {
+    if (processingLocks.has(values[0])) return { rows: [] };
+    processingLocks.add(values[0]); return { rows: [{ transaction_id: values[0] }] };
+  }
+  if (sql.includes('DELETE FROM order_processing_locks')) { processingLocks.delete(values[0]); return { rows: [] }; }
+  if (sql.includes('FROM digital_orders')) return { rows: digitalOrder ? [digitalOrder] : [] };
+  if (sql.includes('INSERT INTO digital_orders')) { digitalOrder = { id: 2 }; return { rows: [digitalOrder] }; }
+  if (sql.includes('INSERT INTO download_tokens')) { digitalTokens.push({ token: values[0] }); return { rows: [] }; }
+  if (sql.includes('FROM download_tokens')) return { rows: digitalTokens };
   if (sql.includes('FROM order_shipments')) return { rows: records.length ? records.map(row => ({ ...row })) : existingComplete ? [{ id: 1, status: 'label_created', shippo_transaction_id: 'transaction_existing', label_url: 'https://example.com/label', customer_tracking_email_sent_at: new Date() }] : [] };
   if (sql.includes('SELECT')) return { rows: existing ? [{ id: 1, transaction_id: 'pi_test' }] : [] };
   if (sql.includes('INSERT INTO orders')) { existing = true; return { rows: [{ id: 1 }] }; }
@@ -32,12 +43,14 @@ const pool = { query: async (sql, values) => {
 } };
 const rate = { objectId: 'rate_test', provider: 'USPS', amount: '8.00', servicelevel: { name: 'Ground' } };
 stub('../config/db', pool);
+stub('../services/newsletter', { recordNewsletterConsent: async (consent) => { newsletterCalls.push(consent); } });
 stub('../config/mailer', { sendMail: async (mail) => {
+  if (mailGate) await mailGate();
   if (failCustomerMail && mail.to === 'reader@example.com') throw new Error('Customer email failed');
   messages.push(mail); return {};
 } });
 stub('../config/stripe', () => ({ paymentIntents: {
-  retrieve: async () => ({ status, amount_received: 10000 }),
+  retrieve: async () => ({ status, amount_received: 100000 }),
   create: async (payload) => { paymentRequests.push(payload); return { client_secret: 'mock_secret' }; },
 } }));
 stub('../config/shippo', { addressFrom: { country: 'US' }, shippo: {
@@ -76,6 +89,8 @@ test.before(async () => {
 });
 test.after(() => new Promise(resolve => server.close(resolve)));
 test.beforeEach(() => {
+  processingLocks = new Set(); digitalOrder = null; digitalTokens = []; mailGate = null;
+  newsletterCalls = [];
   queries = []; messages = []; labels = 0; status = 'succeeded'; invalidAddress = false; failLabel = false; existing = false; paymentRequests = [];
   records = []; labelAttempts = 0; shipmentRequests = 0; transactionResults = []; existingComplete = false; failShipmentAt = 0; noRates = false; failCustomerMail = false;
   splitGermanAddress = false; shipmentPayloads = [];
@@ -92,6 +107,35 @@ test('shipping returns validated address and quote without buying labels', async
   const response = await post('/shipping', { addressTo: address, bookQuantity: 1, otherPhysicalQuantity: 0, printQuantity: 0 });
   assert.equal(response.status, 200); assert.equal(typeof response.body.totalShipping, 'number');
   assert.equal(response.body.validatedAddress.city, 'BROOKLYN'); assert.equal(labels, 0);
+});
+
+for (const [id, choiceProductId, price, packageCount] of [
+  ['bundle-book-gold-foil-print', undefined, 80, 2],
+  ['bundle-book-sticker', 'mimo-sticker', 30, 1],
+  ['bundle-book-base-print', 'blue-dragon-print', 37, 2],
+  ['bundle-slow-comics-ambassador', undefined, 130, 2],
+]) {
+  test(`${id}: quote, payment and fulfillment expand catalog contents despite wrong client counts`, async () => {
+    const cartItems = [{ id, choiceProductId, quantity: 1, format: 'physical', requiresShipping: true, price: 0.01, name: 'Wrong name' }];
+    const data = { ...order(), total: price + 8, bookQuantity: 0, printQuantity: 0, otherPhysicalQuantity: 99, cartItems };
+    const quote = await post('/shipping', { addressTo: address, ...data });
+    assert.equal(quote.status, 200); assert.equal(quote.body.shipmentCount, packageCount);
+    const payment = await post('/payment', { ...data, format: 'physical', orderQuantities: { bookQuantity: 0 } });
+    assert.equal(payment.status, 200); assert.equal(paymentRequests[0].amount, (price + 8) * 100);
+    assert.equal(JSON.parse(paymentRequests[0].metadata.orderQuantities).bookQuantity, 1);
+    const response = await post('/orders', data);
+    assert.equal(response.status, 200); assert.equal(labels, packageCount);
+    assert.equal(queries.find(q => q.sql.includes('INSERT INTO orders')).values[3], 1);
+    assert.ok(messages.every(mail => mail.text.includes('Includes: Nandi and the Castle in the Sea')));
+    assert.ok(messages.every(mail => !mail.text.includes('Wrong name')));
+  });
+}
+
+test('invalid bundle choices cannot create payments, orders, or labels', async () => {
+  const data = { ...order(), cartItems: [{ id: 'bundle-book-sticker', quantity: 1, choiceProductId: 'cover-print', format: 'physical' }] };
+  await post('/payment', { ...data, format: 'physical' });
+  const result = await post('/orders', data);
+  assert.equal(result.status, 400); assert.equal(queries.length, 0); assert.equal(labels, 0); assert.equal(paymentRequests.length, 0);
 });
 test('invalid shipping address is actionable and cannot buy a label', async () => {
   invalidAddress = true;
@@ -164,7 +208,7 @@ test('configured digital checkout emails the website selection page and correct 
     assert.equal(response.status, 200);
     assert.match(response.body.downloadLink, /^https:\/\/shop\.example\/download\/[a-f0-9]{64}$/);
     assert.ok(messages[0].text.includes(response.body.downloadLink));
-    assert.match(messages[0].text, /4 downloads total and expires in 10 days/);
+    assert.match(messages[0].text, /4 downloads total and expires in 1 week/);
   } finally { delete process.env.FRONTEND_URL; }
 });
 
@@ -211,7 +255,9 @@ test('network failure leaves an unknown attempt and retry does not repurchase', 
 
 test('partial multi-package failure preserves good labels, attempts remaining packages, and stays in review on retry', async () => {
   transactionResults = [{}, { status: 'ERROR', labelUrl: null, messages: [{ text: 'Package rejected' }] }, {}];
-  const data = { ...order(), printQuantity: 3, total: 80, cartItems: [item, { id: 'cover-print', quantity: 3, format: 'physical', requiresShipping: true }] };
+  const data = { ...order(), printQuantity: 6, total: 125, cartItems: [item,
+    { id: 'cover-print', quantity: 5, format: 'physical', requiresShipping: true },
+    { id: 'blue-dragon-print', quantity: 1, format: 'physical', requiresShipping: true }] };
   const response = await post('/orders', data);
   assert.equal(response.status, 202); assert.equal(response.body.labelsCreated, 2);
   assert.equal(labelAttempts, 3); assert.equal(records.length, 3);
@@ -265,3 +311,37 @@ test('email failure keeps successful labels and a retry cannot repurchase them',
   assert.equal(retry.status, 202); assert.equal(retry.body.labelsCreated, 1);
   assert.equal(labelAttempts, 1); assert.equal(messages.length, 2);
 });
+
+for (const source of ['physical', 'digital']) {
+  test(source + ': simultaneous fulfillment cannot duplicate labels, tokens or emails', async () => {
+    let signalStarted, releaseMail;
+    const started = new Promise(resolve => { signalStarted = resolve; });
+    const gate = new Promise(resolve => { releaseMail = resolve; });
+    mailGate = async () => { signalStarted(); await gate; };
+    const data = order();
+    if (source === 'digital') { data.total = 27; data.cartItems = [{ ...item, format: 'digital', requiresShipping: false }]; }
+    const endpoint = source === 'digital' ? '/digital' : '/orders';
+    const first = post(endpoint, data);
+    await started;
+    const duplicates = await Promise.all(Array.from({ length: 5 }, () => post(endpoint, data)));
+    assert.ok(duplicates.every(response => response.status === 409 && response.body.code === 'ORDER_PROCESSING'));
+    releaseMail(); assert.equal((await first).status, 200);
+    assert.equal(messages.length, 2); assert.equal(labels, source === 'physical' ? 1 : 0);
+    assert.equal(digitalTokens.length, source === 'digital' ? 1 : 0);
+    assert.equal(processingLocks.size, 0);
+    assert.equal((await post(endpoint, data)).status, 200);
+    assert.equal(messages.length, 2);
+  });
+  test(source + ': newsletter opt-in reaches service only after a paid order is saved', async () => {
+    const data = { ...order(), newsletterOptIn: true };
+    if (source === 'digital') { data.total = 27; data.cartItems = [{ ...item, format: 'digital', requiresShipping: false }]; }
+    const endpoint = source === 'digital' ? '/digital' : '/orders';
+    status = 'requires_payment_method';
+    await post(endpoint, data); assert.equal(newsletterCalls.length, 0);
+    status = 'succeeded';
+    const result = await post(endpoint, data);
+    assert.equal(result.status, 200);
+    assert.deepEqual(newsletterCalls[0], { optedIn: true, email: address.email, name: address.name, transactionId: 'pi_test', source });
+    assert.ok(queries.some(q => q.sql.includes(source === 'digital' ? 'INSERT INTO digital_orders' : 'INSERT INTO orders')));
+  });
+}

@@ -23,7 +23,8 @@ const App = () => {
           <Route path="/buy/:productId" component={BuyACopy} />
           <Route path="/products" component={ProductList} />
           <Route path="/cart" component={Cart} />
-          <Route path="/checkout" component={Checkout} />
+          <Route exact path="/checkout/digital" render={() => <Checkout key="digital" digitalOnly />} />
+          <Route path="/checkout" render={() => <Checkout key="cart" />} />
           <Route path="/download/:token" component={DownloadPage} />
           <Route path="/read" component={ComicReader}/>
           <Route path="/readerAuth" component={ReaderAuthenticate}/>

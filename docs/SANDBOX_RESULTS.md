@@ -70,3 +70,89 @@ counts and customer confirmation timestamps preserved. No extra labels/emails we
 The regression suites passed 53 backend cases, 6 PayPal payload cases, and 36 browser cases.
 Mocked failure cases verify Shippo ERROR/WAITING/QUEUED, missing URLs, network uncertainty, absent rates,
 address and shipment-creation failures, customer-email failure, partial-package success, and incomplete retries.
+
+## Bundle sandbox verification — November 3, 2026
+
+Used the new, user-confirmed isolated Neon test branch, real Stripe test payments, Shippo test-mode labels,
+and captured customer/admin emails. No production deployment or delivered email was performed.
+
+| Coverage | Final result |
+| --- | --- |
+| Collectible-print bundle | Passed domestic and Canadian payment, quote, order, labels, emails, and completed-order retry |
+| Sticker bundle | Passed all ten domestic design choices and a Canadian representative |
+| Base-print bundle | Passed both domestic design choices and a Canadian representative |
+| Ambassador bundle | Passed domestic and Canadian checkout; one book, three prints, ten stickers; two packages |
+| Two Ambassador bundles | Passed; two books, six prints, twenty stickers; three packages, with prints separate from books |
+| Declined/unconfirmed bundle payments | Rejected fulfillment; no order or email created |
+| Completed-order retries | No duplicate order, shipment record, or email |
+| Label audit | All 31 labels from both runs retrieved as Shippo test-mode SUCCESS transactions and downloaded as PDF files; representative domestic/international PDFs rendered and inspected |
+| PayPal | Sandbox authentication passed; buyer approval/capture remains unverified because no sandbox buyer login is available |
+| Email delivery | Content, bundle/design names, admin label links and customer tracking links verified using local captures; SMTP/inbox delivery unverified |
+
+The first run passed 17 of 21 scenarios. Four Canadian cases exposed a carrier rejection:
+USPS limits `customs_declaration.contents_explanation` to 25 characters, while the existing book-package description exceeded it.
+The application now uses `Graphic novel` or `Books and stickers`; a regression test covers the carrier limit.
+Fresh test orders then passed all four Canadian cases. The four original paid test orders remain in manual review with
+their original attempt evidence and partial labels; no labels were automatically repurchased for them.
+
+Across successful checkouts, 19 synthetic paid orders each generated a customer/admin email pair (38 confirmations).
+The initial four failed Canadian orders also generated four manual-fulfillment alerts. Synthetic records remain for inspection.
+
+Evidence in ignored `server/sandbox-results/`:
+
+- `141ddbaa-3d69-4617-9670-491366f867cf.json`: 14 domestic/design cases, bulk Ambassador case, negative payment cases, and original international failures.
+- `c3771392-1a2c-4efd-8f56-252c2e1fb270.json`: all four corrected international cases passed.
+- Matching `-label-audit.json` reports and PDFs: 24 initial-run labels plus seven corrected international labels.
+- `bundle-service-preflight.json`: Stripe/PayPal sandbox authentication and real Shippo quotes for every bundle.
+- `bundle-regression-tests.log`: 97 backend cases passed after the customs fix.
+- `bundle-full-browser-tests.log`: 55 desktop/mobile browser cases passed, one desktop-only-inapplicable case skipped; browser payments/APIs mocked.
+
+The React payment-payload tests (6) and optimized production build passed. These API sandbox checks do not establish
+real Stripe.js card entry, 3DS/redirect UI completion, PayPal capture, SMTP delivery, or deployed-preview connectivity.
+
+### Mixed-cart examples
+
+Follow-up run `2c9aab82-742d-47bd-bda8-8f933027a2a0` passed both requested examples:
+
+- One standalone physical book plus one collectible-print bundle: two books and one print; $107 subtotal + $11.71 shipping = $118.71. Actual Stripe sandbox payment, one saved order, two test labels, both captured emails, and duplicate-safe retry verified. Both label PDFs passed the provider/download audit.
+- One digital book plus the physical collectible-print bundle: payment setup returned HTTP 400 with the existing separate-checkout message. No payment or email was created. This is a blocked-cart example, not a combined order.
+
+Both appear in the local order/email review at port 4176 alongside the earlier examples. Run with `npm --prefix server run test:sandbox -- --mixed-examples` to repeat against the configured isolated test branch.
+
+### Direct digital checkout and print-shipping notices
+
+The book's digital option now opens a dedicated checkout without adding to or clearing the physical cart.
+Pending digital payment state and the Stripe return URL use the dedicated digital route.
+The optimized build, six React PayPal payload cases, and 61 desktop/mobile browser cases passed (one skipped).
+New browser coverage checks direct digital success, decline, and Stripe return while preserving the physical cart
+and pending checkout. Payment SDKs and backend responses are mocked in these browser cases; PayPal capture remains unverified.
+Print-bundle pages and book/print checkout show the domestic versus international package-charge explanation before payment.
+
+### Direct digital sandbox purchase — November 3, 2026
+
+- API run `55ee076a-a2ce-47a3-bfef-e3ae06a27ee9` passed actual Stripe digital payment/order/token/email creation, completed-order retry without duplicates, and declined-payment rejection.
+- Real Stripe.js browser run `4e32a4d1-4040-4117-966b-fab6cb88bdc4` opened the direct checkout and filled the real test-card form. Payment completion stalled with Stripe/hCaptcha human-verification UI; the raw run records a fulfillment-response timeout. This automated browser run is not a successful purchase.
+- The user then operated the connected sandbox preview at `http://127.0.0.1:4175/checkout/digital`. Independent read-back confirmed test payment `pi_3UXqHOAjoj6fyL5z1ue5ZVgU` succeeded for $27, digital order `2500d4bc-2695-4088-94ab-3f342a097103`, one token with four uses, and two captured emails. Evidence: `server/sandbox-results/direct-digital-manual-verification.json`.
+- The assistant did not independently observe the user's final thank-you screen or cart state. Automated mocked browser checks previously verified physical-cart preservation on success, decline, and Stripe return.
+- Test PDF assets and Drive credentials are not configured in this sandbox, so actual book-file downloading remains unverified. SMTP/inbox delivery is also unverified; the emails are local captures.
+
+The actual digital order and captured plain-text customer/admin emails are previewed locally at `http://127.0.0.1:4176/digital-order.html`.
+# Mailing list checkout — November 3, 2026
+
+Implemented optional, unchecked Kit signup on physical and direct digital checkout. Validation: 5 newsletter service tests, 30 checkout route tests, 8 React/PayPal tests, 43 desktop/mobile checkout browser tests passed (1 mobile-only check skipped on desktop); normal and sandbox production builds passed.
+
+Actual Stripe sandbox digital purchase for the authorized test address completed successfully. Isolated staging order `46b27eed-e715-40e0-8265-8d288a76decf`, payment `pi_3UXtzYAjoj6fyL5z0d2hwL04`; one order, one 4-use download token and two locally captured transactional emails. Retrying did not duplicate the order, token, emails or consent. No transactional emails were delivered externally.
+
+Kit initially rejected the saved key with HTTP 401 (`The API key is invalid`). The single affirmative consent record stayed pending after initial order and duplicate-request attempts, verifying that a Kit failure cannot block digital fulfillment and that signup survives for retry. Local initial report: ignored `server/sandbox-results/866fb0e3-482e-42a5-8ac3-1dbd06e5e8ee.json`.
+
+After the user replaced the key, the account endpoint returned HTTP 200 for Slow Comics with the expected verified sender address. Retried the existing test consent without another payment: status `synced`, subscriber ID `4372172123`, subscriber state `active`, attempt count 3, last error cleared. A separate Kit subscriber GET confirmed erenserpin@gmail.com is active. Repeating the consent call left the attempt count unchanged, confirming no additional Kit submission. Restarted the local staging API to load the replacement key. No welcome email/sequence is configured, and inbox delivery has not been tested. Production deployment remains pending.
+
+## Bundle release checks — November 4, 2026
+
+User deferred PayPal buyer testing and authorized a deployed preview, SMTP tests, and simultaneous-order tests. Found a digital token/email race between the existing-order check and token creation. Both order routes now use a durable, payment-keyed database processing claim. Competing requests return HTTP 409 while the original request works; finished requests release the claim before responding. Crashed requests retain claims for manual review. Existing payment verification, shipping-attempt safeguards and completed-order behavior remain in place.
+
+The backend regression suite passed all 108 checks. Actual sandbox run `dfbb4935-776a-4a20-8cdc-f727a50e42b9` passed concurrent digital and Ambassador fulfillment: six requests per test payment, one saved order, one digital token or two physical labels, and one customer/admin email pair each. Concurrent response codes were 200/409; no duplicate tokens, labels or emails. Completed-order retries passed.
+
+Using the configured Gmail sender, SMTP verification succeeded and both representative Ambassador customer/admin receipts were accepted for erenserpin@gmail.com, with no rejected recipients. Subjects begin `[SANDBOX TEST]`; no other address received these test emails. Provider message IDs/responses are retained in ignored `server/sandbox-results/bundle-smtp-verification.json`. Inbox arrival and visual/link verification are awaiting the user's response.
+
+Preview prepared on branch `codex/bundle-release-checks`. Automatic approval review rejected uploading credentials to Vercel without specific user approval. An explicit request names the existing backend project, branch-only Preview scope, test credentials/Gmail app password, and test-recipient restriction. Deployment testing awaits that approval; production has not changed.

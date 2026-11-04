@@ -1,5 +1,6 @@
 import React from "react";
 import { products } from "../assets/productInfo";
+import { getCartKey, getContentsText } from '../assets/cartProducts';
 
 const money = (value) => `$${value.toFixed(2)}`;
 
@@ -26,10 +27,11 @@ const CheckoutSummary = ({ cart, subtotal, shippingPrice, requiresShipping }) =>
           const image = product?.images?.[0]?.url || item.image;
           const isBook = ["Book", "Graphic Novel"].includes(product?.type || item.type);
           return (
-            <li className="checkout-summary-item" key={`${item.id}-${item.format}`}>
+            <li className="checkout-summary-item" key={getCartKey(item)}>
               {image && <img src={image} alt="" className="checkout-summary-thumbnail" />}
               <div className="checkout-summary-item-info">
                 <span>{item.name}</span>
+                {getContentsText(item) && <small>{getContentsText(item)}</small>}
                 <small>{item.format === "digital" ? "Digital copy · " : isBook ? "Physical copy · " : ""}Qty {item.quantity}</small>
               </div>
               <span className="checkout-summary-item-price">{money(item.price * item.quantity)}</span>

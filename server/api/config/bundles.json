@@ -1,0 +1,33 @@
+[
+  {
+    "id": "bundle-book-gold-foil-print",
+    "name": "Book + Collectible Gold Foil Print",
+    "price": 80,
+    "value": 97,
+    "productIds": ["gold-foil-dragon-print"]
+  },
+  {
+    "id": "bundle-book-sticker",
+    "name": "Book + Sticker Bundle",
+    "price": 30,
+    "value": 32,
+    "choiceLabel": "Choose your sticker",
+    "productIds": ["nandi-mesca-sticker", "dragon-sticker", "timekeeper-sticker", "aldren-sticker", "koya-sticker", "bialla-sticker", "junip-sticker", "mimo-sticker", "zarago-sticker", "carob-puka-sticker"]
+  },
+  {
+    "id": "bundle-book-base-print",
+    "name": "Book + Base Print",
+    "price": 37,
+    "value": 42,
+    "choiceLabel": "Choose your print",
+    "productIds": ["cover-print", "blue-dragon-print"]
+  },
+  {
+    "id": "bundle-slow-comics-ambassador",
+    "name": "Slow Comics Ambassador Bundle: One of Everything!",
+    "price": 130,
+    "value": 177,
+    "productIds": [],
+    "includedProductIds": ["nandi-book", "gold-foil-dragon-print", "cover-print", "blue-dragon-print", "nandi-mesca-sticker", "dragon-sticker", "timekeeper-sticker", "aldren-sticker", "koya-sticker", "bialla-sticker", "junip-sticker", "mimo-sticker", "zarago-sticker", "carob-puka-sticker"]
+  }
+]

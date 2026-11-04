@@ -150,11 +150,25 @@ and local captured emails. They never run automatically in CI. Configure the iso
 ```powershell
 npm --prefix server run test:sandbox
 npm --prefix server run test:sandbox -- --international
+npm --prefix server run test:sandbox -- --bundles
+npm --prefix server run test:sandbox -- --digital-only
 ```
 
 The first command tests digital success/retry, declined payment rejection, unpaid physical order rejection,
-book fulfillment, sticker-only fulfillment, and a book plus three prints (three packages).
+book fulfillment, sticker-only fulfillment, and a book plus three prints (two packages).
+Prints pack up to five per package and always ship separately from books.
 The second tests a Canadian book order including customs creation.
+`--digital-only` runs successful digital payment/order/token/email creation with safe retry, plus declined digital payment rejection.
+`--bundles` checks all 14 domestic bundle/design combinations, one Canadian checkout per bundle,
+two Ambassador bundles (six prints in two print packages plus one book/sticker package), and declined/unconfirmed bundle payments.
+It verifies actual Stripe amounts, order book quantities, Shippo attempt statuses, bundle/design names in both captured emails,
+admin label links, customer tracking links, and duplicate-safe completed-order retries.
+`--bundles --international-only` runs just the four Canadian bundle cases.
+The bundle runner checkpoints payment IDs before confirmation. Use `--bundles-resume <run-UUID>` to reverify an interrupted
+completed payment without creating another payment. Recorded partial/unknown fulfillment stays in manual review;
+the runner does not repurchase its labels. Failed cases can be rerun with fresh synthetic orders after fixing their cause.
+Run `node server/api/scripts/auditSandboxBundleLabels.js <run-UUID>` from the repo root to read back Shippo transactions,
+verify `SUCCESS` and test mode, and download/check every created label PDF, including partial test-order labels.
 Every successful flow checks actual Neon rows and captured email bodies; completed-order retries check
 for duplicate records, tokens, shipments and email captures. Test records remain for inspection.
 For a completed physical payment whose report failed only during verification, use
@@ -173,6 +187,14 @@ in ignored `server/sandbox-results/`. Captured emails are in ignored `server/tes
 Do not publish those directories wholesale: raw logs can contain test download tokens and provider details.
 
 Recorded outcomes: [Sandbox verification results](SANDBOX_RESULTS.md).
+
+## Concurrent order requests and receipt delivery
+
+Run `npm --prefix server run test:sandbox -- --concurrency` for six simultaneous fulfillment requests per Stripe test payment, covering digital and Ambassador purchases. The test uses the isolated staging database, real Stripe/Shippo test services, and captured emails. It verifies one order, one token or the expected labels, one customer/admin email pair, and safe completed-order retries.
+
+Both order routes claim the payment in `order_processing_locks` after payment verification. Concurrent requests return HTTP 409 with code `ORDER_PROCESSING`; the customer can wait and retry without paying again. The claim is released before the response. A crashed process intentionally leaves its claim for review rather than expiring it and risking another label purchase. If a claim remains, inspect the order, shipment attempts, Shippo transactions, tokens, and emails, and confirm no worker is active before an operator removes that transaction's claim. Do not blindly delete all claims or retry uncertain label purchases.
+
+Default staging mail stays captured. Explicit `EMAIL_MODE=sandbox-smtp` permits real SMTP tests only when `SANDBOX_EMAIL_RECIPIENT` contains one email address. The mailer replaces all To/Cc/Bcc and envelope recipients with that test address and prefixes subjects with `[SANDBOX]`. Production rejects staging mode. Never promote a sandbox deployment or copy its configuration to production.
 
 ## Address form verification
 
@@ -207,6 +229,16 @@ Desktop checkout uses a sticky order-summary sidebar; mobile uses a compact expa
 Summary items use the first catalog image, quantities, line totals, and live shipping/total amounts.
 On mobile, a separate always-open subtotal/shipping/total card appears next to payment after a quote is obtained.
 It disappears when address edits invalidate the quote. Prints and stickers show quantity without a physical-copy label.
+
+Print bundles show a persistent shipping-policy notice below their description and again before shipping calculation
+when the cart includes books and prints. Domestic checkout charges the highest package rate; international checkout
+charges the sum of package rates. The text accounts for more than two packages in larger orders.
+
+Digital purchases use a direct `/checkout/digital` route from the book's "Buy digital copy" link. They bypass the
+shopping cart, preserve its physical items on success/decline/redirect, and keep pending payment state under
+`slowComicsPendingDigitalCheckout`, separate from the physical checkout. Existing digital-only carts still work.
+The browser suite covers successful/declined direct digital checkout and restoring a Stripe return without clearing
+the physical cart or its pending checkout. These checks mock Stripe and the backend.
 
 `npm run check` covers manual entry with Google blocked, native Chromium autofill including apartments,
 Google component parsing, postal/region fields, international phone requirements, quote invalidation,

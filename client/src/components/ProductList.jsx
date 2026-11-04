@@ -5,8 +5,15 @@ import { products } from "../assets/productInfo";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
 import { useCart } from "./CartContext";
+import { bundles, getMaxQuantity as getItemMaxQuantity } from '../assets/cartProducts';
+import BundleCollage from './BundleCollage';
 
 const productSections = [
+  {
+    id: "bundles",
+    label: "Bundles",
+    types: ["Bundle"],
+  },
   {
     id: "graphic-novels-comics",
     label: "Graphic Novels/Comics",
@@ -29,7 +36,7 @@ const ProductList = () => {
   const [recentlyAddedId, setRecentlyAddedId] = React.useState(null);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const getMaxQuantity = (product) => product.id === "nandi-book" ? 4 : 5;
+  const getMaxQuantity = (product) => getItemMaxQuantity({ ...product, format: 'physical' }, cart.filter(item => item.id !== product.id || item.format !== 'physical'));
   const getProductCartQuantity = (product) =>
     cart
       .filter((item) => item.id === product.id && item.format === "physical")
@@ -91,7 +98,7 @@ const ProductList = () => {
 
         <div className="shop-sections">
           {productSections.map((section) => {
-            const sectionProducts = products.filter((product) =>
+            const sectionProducts = section.id === 'bundles' ? bundles.map(bundle => ({ ...bundle, type: 'Bundle', images: products[0].images })) : products.filter((product) =>
               section.types.includes(product.type)
             );
 
@@ -108,28 +115,39 @@ const ProductList = () => {
                   {sectionProducts.map((product) => {
                     const quantityInCart = getProductCartQuantity(product);
                     const isAtMaxQuantity = quantityInCart >= getMaxQuantity(product);
+                    const isStickerChoice = product.id === 'bundle-book-sticker';
+                    const choiceName = isStickerChoice ? 'sticker' : 'print';
+                    const cardName = isStickerChoice ? 'Book + Any Sticker' : product.name;
 
                     return (
                       <article key={product.id} className="product-card">
                         <Link
-                          to={`/buy/${product.id}`}
+                          to={product.type === 'Bundle' ? `/buy/nandi-book?bundle=${product.id}` : `/buy/${product.id}`}
                           className="product-card-link"
                         >
-                          <div className="image-wrapper">
-                            <img
+                          <div className={`image-wrapper ${product.type === 'Bundle' ? 'bundle-card-images' : ''}`}>
+                            {product.includedProductIds ? <BundleCollage productIds={product.includedProductIds} /> : <><img
                               src={product.image || product.images?.[0]?.url}
-                              alt={product.name}
+                              alt={cardName}
                             />
+                            {product.choiceLabel ? <div className="bundle-card-designs" aria-hidden="true">
+                              {product.productIds.slice(0, 4).map(id => <img key={id} src={products.find(entry => entry.id === id).images[0].url} alt="" />)}
+                            </div> : product.type === 'Bundle' && <img src={products.find(entry => entry.id === product.productIds[0]).images[0].url} alt={products.find(entry => entry.id === product.productIds[0]).name} />}</>}
 
                             <span className="product-type-badge">
                               {product.type}
                             </span>
                           </div>
-                          <h2 className="product-name">{product.name}</h2>
+                          <h2 className={`product-name${product.includedProductIds ? ' ambassador-title' : ''}`}>
+                            {product.includedProductIds ? <><span>Slow Comics Ambassador Bundle</span>{' '}<span>One of Everything!</span></> : cardName}
+                          </h2>
+                          {product.includedProductIds && <p className="bundle-card-choice">1 book · 3 prints · 10 stickers</p>}
+                          {product.choiceLabel && <p className="bundle-card-choice">Choose 1 of {product.productIds.length} {choiceName} designs</p>}
                           <p className="product-price">${product.price}</p>
+                          {product.type === 'Bundle' && <p className="bundle-card-value">${product.value} value</p>}
                         </Link>
 
-                        <button
+                        {product.type === 'Bundle' ? <Link className="quick-add-button" to={`/buy/nandi-book?bundle=${product.id}`}>{product.choiceLabel ? `Choose your ${choiceName}` : 'Choose bundle'}</Link> : <button
                           type="button"
                           className={`quick-add-button ${recentlyAddedId === product.id ? "quick-add-button-added" : ""}`}
                           onClick={() => handleQuickAdd(product)}
@@ -144,7 +162,7 @@ const ProductList = () => {
                                 ? "Max in cart"
                                 : "Add to cart"}
                           </span>
-                        </button>
+                        </button>}
                       </article>
                     );
                   })}

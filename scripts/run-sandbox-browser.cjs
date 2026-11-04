@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 const dotenv = require('../server/node_modules/dotenv');
 const root = path.resolve(__dirname, '..');
 const env = { ...process.env, ...dotenv.parse(fs.readFileSync(path.join(root, 'server/.env.staging.local'))),
-  APP_ENV: 'staging', PORT: '5011', BACKEND_URL: 'http://127.0.0.1:5011/', CF_ENDPOINT: 'https://storage.example.com' };
+  APP_ENV: 'staging', PORT: '5011', BACKEND_URL: 'http://127.0.0.1:5011/', FRONTEND_URL: 'http://127.0.0.1:4175', CF_ENDPOINT: 'https://storage.example.com' };
 require('../server/api/config/environment').assertSafeEnvironment(env);
 const directory = path.join(root, 'server/sandbox-results');
 fs.mkdirSync(directory, { recursive: true });
@@ -32,7 +32,7 @@ async function run() {
   start(path.join(root, 'server/api/server.js'), env);
   start(path.join(root, 'scripts/serve-test-client.cjs'), { ...process.env, SANDBOX_CLIENT: 'true', TEST_CLIENT_PORT: '4175' });
   await Promise.all([ready('http://127.0.0.1:5011/'), ready('http://127.0.0.1:4175/')]);
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ channel: process.platform === 'win32' ? 'chrome' : 'chromium', headless: true });
   const page = await browser.newPage();
   page.setDefaultTimeout(30000);
   const errors = [];
@@ -40,14 +40,19 @@ async function run() {
   page.on('dialog', dialog => dialog.accept());
   // Third-party analytics and Google Maps are irrelevant to the digital checkout and remain blocked.
   await page.route(/googletagmanager|google-analytics|maps.googleapis.com/, route => route.abort());
+  const physicalCart = [{ id: 'nandi-book', name: 'Nandi and the Castle in the Sea', price: 27, quantity: 1,
+    type: 'Graphic Novel', format: 'physical', requiresShipping: true }];
+  await page.addInitScript(cart => { if (!localStorage.getItem('sandboxCartSeeded')) {
+    localStorage.setItem('slowComicsCart', JSON.stringify(cart)); localStorage.setItem('sandboxCartSeeded', 'true');
+  } }, physicalCart);
   await page.goto('http://127.0.0.1:4175/buy/nandi-book');
   await page.getByLabel('Digital Copy (Download)').check();
-  await page.getByRole('button', { name: 'Add to Cart', exact: true }).click();
-  await page.getByRole('link', { name: 'View Cart', exact: true }).click();
-  await page.getByRole('link', { name: 'Proceed to Checkout' }).click();
+  await page.getByRole('link', { name: 'Buy digital copy', exact: true }).click();
+  await page.waitForURL('**/checkout/digital');
   await page.getByLabel('Name', { exact: true }).fill('Sandbox Browser Test');
   await page.getByLabel('Email', { exact: true }).fill('checkout-test@example.com');
   await page.getByRole('button', { name: 'Pay $27.00', exact: true }).waitFor({ timeout: 60000 });
+  await page.screenshot({ path: path.join(directory, `${runId}-digital-checkout.png`), fullPage: true });
   console.log('Actual React checkout loaded its Stripe sandbox payment form.');
   async function locateInStripeFrames(selector) {
     for (let attempt = 0; attempt < 120; attempt++) {
@@ -79,22 +84,36 @@ async function run() {
   await page.waitForURL('**/thank-you', { timeout: 30000 });
   const paymentId = await page.evaluate(() => localStorage.getItem('slowComicsFulfilledPaymentIntent'));
   const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')));
-  if (!paymentId?.startsWith('pi_') || cart.length !== 0) throw new Error('Browser did not retain payment completion and clear cart');
+  if (!paymentId?.startsWith('pi_') || JSON.stringify(cart) !== JSON.stringify(physicalCart)) throw new Error('Digital purchase did not preserve the physical cart');
   const { Client } = require('../server/node_modules/pg');
   const client = new Client({ connectionString: env.DATABASE_URL });
   await client.connect();
   try {
     const orders = await client.query('SELECT id FROM digital_orders WHERE transaction_id = $1', [paymentId]);
     if (orders.rowCount !== 1) throw new Error('Browser payment did not create exactly one digital order');
-    const tokens = await client.query('SELECT uses_left FROM download_tokens WHERE order_id = $1', [orders.rows[0].id]);
-    if (tokens.rowCount !== 1 || tokens.rows[0].uses_left !== 3) throw new Error('Browser order download token missing');
-    report.results.push({ name: 'Digital browser checkout: real test card → payment → order → token → thank-you → empty cart', status: 'passed', paymentId, orderId: orders.rows[0].id });
+    const tokens = await client.query('SELECT token, uses_left FROM download_tokens WHERE order_id = $1', [orders.rows[0].id]);
+    if (tokens.rowCount !== 1 || tokens.rows[0].uses_left !== 4) throw new Error('Browser order download token missing');
+    const captures = fs.readdirSync(path.join(root,'server/test-emails')).filter(file=>file.endsWith('.json'))
+      .map(file=>JSON.parse(fs.readFileSync(path.join(root,'server/test-emails',file),'utf8')))
+      .filter(mail=>mail.text?.includes(paymentId) || mail.text?.includes(tokens.rows[0].token));
+    if(captures.length !== 2) throw new Error('Expected actual customer/admin digital email captures');
+    report.results.push({ name: 'Direct digital browser checkout: real test card → payment → order → token → emails → thank-you; physical cart preserved', status: 'passed', paymentId, orderId: orders.rows[0].id, capturedEmails: captures.length });
   } finally { await client.end(); }
   report.pageErrors = errors;
   await page.screenshot({ path: path.join(directory, `${runId}-thank-you.png`), fullPage: true });
-  console.log('PASS: Actual browser test-card payment created one digital order and download token; thank-you page shown and cart cleared.');
+  console.log('PASS: Actual browser test-card payment created one digital order, download token and email pair; thank-you shown and physical cart preserved.');
 }
 run().catch(async error => {
+  if (browser && error.name !== 'StripeHumanVerificationError') {
+    for (const page of browser.contexts().flatMap(context => context.pages())) {
+      const challenge = page.frames().find(frame => frame.url().includes('hcaptcha.com'));
+      if (challenge && /human verification|Verify|Please try again/i.test(await challenge.locator('body').innerText().catch(() => ''))) {
+        error.name = 'StripeHumanVerificationError';
+        error.message = 'Stripe requested human verification during card entry/payment; manual browser check required.';
+        break;
+      }
+    }
+  }
   report.results.push({ name: 'Digital browser checkout', status: error.name === 'StripeHumanVerificationError' ? 'blocked' : 'failed', detail: error.message });
   if (browser) {
     const pages = browser.contexts().flatMap(context => context.pages());

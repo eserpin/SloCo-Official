@@ -29,19 +29,19 @@ function ImageGallery({ photos = [] }) {
 
   return (
     <div className="image-carousel">
-      <div className="thumbnail-column">
+      {photos.length > 1 && <div className="thumbnail-column">
         <ImageThumbnails
           photos={photos}
           currentThumbnailUrl={photos[currentPhoto].thumbnail_url}
           thumbnailClick={thumbnailClick}
         />
-      </div>
+      </div>}
 
-      <FiArrowLeft
+      {photos.length > 1 && <FiArrowLeft
         className="carousel-arrow left-arrow"
         style={{ visibility: currentPhoto === 0 ? 'hidden' : 'visible' }}
         onClick={() => changePhoto(currentPhoto - 1)}
-      />
+      />}
 
       {photos.map((photo, index) => (
         <div
@@ -68,13 +68,13 @@ function ImageGallery({ photos = [] }) {
         </div>
       ))}
 
-      <FiArrowRight
+      {photos.length > 1 && <FiArrowRight
         className="carousel-arrow right-arrow"
         style={{
           visibility: currentPhoto === photos.length - 1 ? 'hidden' : 'visible'
         }}
         onClick={() => changePhoto(currentPhoto + 1)}
-      />
+      />}
     </div>
   );
 }

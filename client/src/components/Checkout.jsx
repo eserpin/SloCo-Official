@@ -16,10 +16,18 @@ import { useCart } from "./CartContext";
 import AddressForm, { getAddressErrors } from "./AddressForm";
 import CheckoutSummary, { CheckoutTotals } from "./CheckoutSummary";
 import countryCodes from "../assets/countryCodes";
+import { getShippingQuantities } from '../assets/cartProducts';
+import { products } from '../assets/productInfo';
+import PrintShippingNotice from './PrintShippingNotice';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || "");
 const paypalClientId = process.env.REACT_APP_PAYPAL_CLIENT_ID || "";
 const PENDING_CHECKOUT_KEY = "slowComicsPendingCheckout";
+const DIGITAL_PENDING_CHECKOUT_KEY = 'slowComicsPendingDigitalCheckout';
+const getCheckoutStorageKey = () => window.location.pathname === '/checkout/digital' ? DIGITAL_PENDING_CHECKOUT_KEY : PENDING_CHECKOUT_KEY;
+const bookProduct = products.find(product => product.id === 'nandi-book');
+const digitalCart = [{ id: bookProduct.id, name: bookProduct.name, price: bookProduct.price, type: bookProduct.type,
+  quantity: 1, format: 'digital', requiresShipping: false, image: bookProduct.images[0].url }];
 const FULFILLED_PAYMENT_KEY = "slowComicsFulfilledPaymentIntent";
 const INTERNATIONAL_PHONE_REQUIRED_MESSAGE =
   "A phone number is required for international orders so we can complete customs declarations.";
@@ -31,7 +39,7 @@ const getStripeReturnClientSecret = () =>
 
 const getPendingCheckout = () => {
   try {
-    const pendingCheckout = window.localStorage.getItem(PENDING_CHECKOUT_KEY);
+    const pendingCheckout = window.localStorage.getItem(getCheckoutStorageKey());
     return pendingCheckout ? JSON.parse(pendingCheckout) : null;
   } catch (error) {
     console.error("Could not load pending checkout:", error);
@@ -40,18 +48,15 @@ const getPendingCheckout = () => {
 };
 
 const savePendingCheckout = (payload) => {
-  window.localStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify(payload));
+  window.localStorage.setItem(getCheckoutStorageKey(), JSON.stringify(payload));
 };
 
 const clearPendingCheckout = () => {
-  window.localStorage.removeItem(PENDING_CHECKOUT_KEY);
+  window.localStorage.removeItem(getCheckoutStorageKey());
 };
 
 const getCartShape = (cart) => {
-  const physicalBooks = cart.filter((item) => item.id === "nandi-book" && item.requiresShipping);
-  const stickersBookmarks = cart.filter((item) => item.id !== "nandi-book" && item.type !== "Print");
-  const prints = cart.filter((item) => item.type === "Print");
-  const hasPhysicalItems = physicalBooks.length > 0 || stickersBookmarks.length > 0 || prints.length > 0;
+  const hasPhysicalItems = cart.some(item => item.requiresShipping);
   const hasDigitalItems = cart.some((item) => item.format === "digital" || !item.requiresShipping);
   const format =
     hasPhysicalItems
@@ -61,9 +66,7 @@ const getCartShape = (cart) => {
   return {
     format,
     hasMixedFulfillment: hasPhysicalItems && hasDigitalItems,
-    bookQuantity: physicalBooks.reduce((sum, item) => sum + item.quantity, 0),
-    otherPhysicalQuantity: stickersBookmarks.reduce((sum, item) => sum + item.quantity, 0),
-    printQuantity: prints.reduce((sum, item) => sum + item.quantity, 0),
+    ...getShippingQuantities(cart),
   };
 };
 
@@ -76,6 +79,7 @@ const getCartItemsForOrder = (cart) =>
     format: item.format,
     type: item.type,
     requiresShipping: item.requiresShipping,
+    ...(item.choiceProductId ? { choiceProductId: item.choiceProductId } : {}),
   }));
 
 const getOrderPayload = ({
@@ -84,6 +88,7 @@ const getOrderPayload = ({
   format,
   isInternational,
   orderNote,
+  newsletterOptIn,
   orderQuantities,
   paymentProvider,
   shippingPrice,
@@ -99,6 +104,7 @@ const getOrderPayload = ({
   transactionId,
   paymentProvider,
   orderNote: orderNote?.trim() || "",
+  newsletterOptIn: newsletterOptIn === true,
   cartItems: getCartItemsForOrder(cart),
   ...(format === "physical" && {
     address: {
@@ -166,6 +172,7 @@ const fulfillOrder = async (payload, format) => {
 };
 
 const StripePaymentForm = ({
+  preserveCart = false,
   address,
   cart,
   currency,
@@ -173,6 +180,7 @@ const StripePaymentForm = ({
   isInternational,
   onOrderComplete,
   orderNote,
+  newsletterOptIn,
   orderQuantities,
   shippingPrice,
   total,
@@ -211,6 +219,7 @@ const StripePaymentForm = ({
         format,
         isInternational,
         orderNote,
+        newsletterOptIn,
         orderQuantities,
         paymentProvider: "stripe",
         shippingPrice,
@@ -223,7 +232,7 @@ const StripePaymentForm = ({
       window.localStorage.setItem(FULFILLED_PAYMENT_KEY, paymentIntentId);
       onOrderComplete();
       clearPendingCheckout();
-      clearCart();
+      if (!preserveCart) clearCart();
       alert(getSuccessMessage(format));
       history.push("/thank-you");
     } catch (error) {
@@ -233,7 +242,7 @@ const StripePaymentForm = ({
       );
       setSubmitting(false);
     }
-  }, [address, cart, clearCart, currency, format, history, isInternational, onOrderComplete, orderNote, orderQuantities, shippingPrice, total]);
+  }, [address, cart, clearCart, currency, format, history, isInternational, onOrderComplete, orderNote, newsletterOptIn, orderQuantities, preserveCart, shippingPrice, total]);
 
   useEffect(() => {
     const completeRedirectPayment = async () => {
@@ -285,6 +294,7 @@ const StripePaymentForm = ({
       format,
       isInternational,
       orderNote,
+      newsletterOptIn,
       orderQuantities,
       shippingPrice,
       total,
@@ -293,7 +303,7 @@ const StripePaymentForm = ({
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout`,
+        return_url: `${window.location.origin}${window.location.pathname}`,
       },
       redirect: "if_required",
     });
@@ -344,6 +354,7 @@ const StripePaymentForm = ({
 };
 
 export const PayPalPaymentSection = ({
+  preserveCart = false,
   address,
   cart,
   currency,
@@ -351,6 +362,7 @@ export const PayPalPaymentSection = ({
   isInternational,
   onOrderComplete,
   orderNote,
+  newsletterOptIn,
   orderQuantities,
   shippingPrice,
   total,
@@ -395,6 +407,7 @@ export const PayPalPaymentSection = ({
         format,
         isInternational,
         orderNote,
+        newsletterOptIn,
         orderQuantities,
         paymentProvider: "paypal",
         shippingPrice,
@@ -406,7 +419,7 @@ export const PayPalPaymentSection = ({
       recordPurchase({ cart, currency, shippingPrice, total, transactionId });
       onOrderComplete();
       clearPendingCheckout();
-      clearCart();
+      if (!preserveCart) clearCart();
       alert(getSuccessMessage(format));
       history.push("/thank-you");
     } catch (error) {
@@ -439,13 +452,14 @@ export const PayPalPaymentSection = ({
   );
 };
 
-export const Checkout = () => {
+export const Checkout = ({ digitalOnly = false }) => {
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, []);
   const pendingCheckout = getPendingCheckout();
   const stripeReturnClientSecret = getStripeReturnClientSecret();
-  const { cart } = useCart();
+  const { cart: savedCart } = useCart();
+  const cart = digitalOnly ? digitalCart : savedCart;
   const history = useHistory();
   const [address, setAddress] = useState(pendingCheckout?.address || {
     name: "",
@@ -459,6 +473,7 @@ export const Checkout = () => {
     country_code: "US",
     phone: "",
   });
+  const [newsletterOptIn, setNewsletterOptIn] = useState(pendingCheckout?.newsletterOptIn === true);
   const [orderNote, setOrderNote] = useState(pendingCheckout?.orderNote || "");
   const [shippingPrice, setShippingPrice] = useState(pendingCheckout?.shippingPrice ?? null);
   const [validatedShippingAddress, setValidatedShippingAddress] = useState(null);
@@ -575,6 +590,7 @@ export const Checkout = () => {
 
       const response = await axios.post(getApiUrl("api/shippingCalculation"), {
         addressTo: submittedAddress,
+        cartItems: getCartItemsForOrder(cart),
         ...cartShape,
         isInternational,
       });
@@ -666,7 +682,8 @@ export const Checkout = () => {
     <div>
       <NavBar />
       <div className="checkout-container">
-        <h1 className="title">Checkout</h1>
+        <h1 className="title">{digitalOnly ? 'Digital checkout' : 'Checkout'}</h1>
+        {digitalOnly && <p className="digital-purchase-note">Your download link will be emailed after payment. {savedCart.length > 0 && 'Items in your shopping cart are purchased separately and will stay in your cart.'}</p>}
 
         <div className="checkout-layout">
         <CheckoutSummary cart={cart} subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping={cartShape.format === "physical"} />
@@ -729,22 +746,28 @@ export const Checkout = () => {
           <label>
             Order Notes
             <span className="field-description">
-              If you would like your copy personalized, please put the name you would like it signed to here. You can also leave any other notes you have for us here.
+              {cartShape.format === 'digital' ? 'You can leave any notes about your digital order here.' : 'If you would like your copy personalized, please put the name you would like it signed to here. You can also leave any other notes you have for us here.'}
             </span>
             <textarea
               name="orderNote"
               value={orderNote}
               onChange={(e) => setOrderNote(e.target.value)}
-              placeholder="Personalization name or order notes"
+              placeholder={cartShape.format === 'digital' ? 'Order notes (optional)' : 'Personalization name or order notes'}
               rows="4"
             />
           </label>
         </div>
 
+          <label className="newsletter-opt-in">
+            <input type="checkbox" name="newsletterOptIn" checked={newsletterOptIn}
+              onChange={(e) => setNewsletterOptIn(e.target.checked)} />
+            <span>Subscribe to our email list to be notified about future projects.</span>
+          </label>
         </form>
 
         {cartShape.format === "physical" ? (
           <>
+            {cartShape.bookQuantity > 0 && cartShape.printQuantity > 0 && <PrintShippingNotice />}
             <button className="confirm-button" type="submit" form="checkout-details" disabled={loading}>
               {loading ? "Calculating..." : "Calculate Shipping"}
             </button>
@@ -816,12 +839,14 @@ export const Checkout = () => {
               }}
             >
               <StripePaymentForm
+                preserveCart={digitalOnly}
                 address={address}
                 cart={cart}
                 currency={currency}
                 format={cartShape.format}
                 isInternational={isInternational}
                 onOrderComplete={() => setOrderComplete(true)}
+                newsletterOptIn={newsletterOptIn}
                 orderNote={orderNote}
                 orderQuantities={cartShape}
                 shippingPrice={shippingPrice || 0}
@@ -832,12 +857,14 @@ export const Checkout = () => {
             {paypalClientId && (
               <PayPalScriptProvider options={{ "client-id": paypalClientId, currency }}>
                 <PayPalPaymentSection
+                  preserveCart={digitalOnly}
                   address={address}
                   cart={cart}
                   currency={currency}
                   format={cartShape.format}
                   isInternational={isInternational}
                   onOrderComplete={() => setOrderComplete(true)}
+                  newsletterOptIn={newsletterOptIn}
                   orderNote={orderNote}
                   orderQuantities={cartShape}
                   shippingPrice={shippingPrice || 0}

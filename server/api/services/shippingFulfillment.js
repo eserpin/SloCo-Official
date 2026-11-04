@@ -159,7 +159,7 @@ const getShipmentConfigs = ({
         distanceUnit: "in",
       },
       customs: {
-        contentsExplanation: "Graphic Novel and Stickers/Bookmarks",
+        contentsExplanation: otherPhysicalQuantity > 0 ? "Books and stickers" : "Graphic novel",
         items,
       },
     });
@@ -195,10 +195,11 @@ const getShipmentConfigs = ({
   }
 
   if (printQuantity > 0) {
-    const numShipments = Math.ceil(printQuantity / 2);
+    const printsPerPackage = 5;
+    const numShipments = Math.ceil(printQuantity / printsPerPackage);
 
     for (let i = 0; i < numShipments; i += 1) {
-      const quantityInBox = Math.min(2, printQuantity - i * 2);
+      const quantityInBox = Math.min(printsPerPackage, printQuantity - i * printsPerPackage);
 
       shipmentConfigs.push({
         parcel: {

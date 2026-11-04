@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "newsletter:retry": "node api/scripts/retryNewsletter.js",
     "test:sandbox": "node api/scripts/runSandboxCheckout.js",
     "check:staging-db": "node api/scripts/checkStagingDatabase.js",
     "start": "node api/server.js",

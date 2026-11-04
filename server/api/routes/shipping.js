@@ -8,15 +8,23 @@ const {
 } = require('../services/shippingFulfillment');
 
 const router = express.Router();
+const { getCartDetails } = require('../config/products');
 
 router.post('/', async (req, res) => {
-  const { addressTo, bookQuantity, otherPhysicalQuantity, printQuantity, isInternational } = req.body;
+  const { addressTo } = req.body;
+  let quantities = req.body;
+  if (req.body.cartItems) {
+    try { quantities = getCartDetails(req.body.cartItems).quantities; }
+    catch (error) { return res.status(400).json({ error: error.message, details: error.message }); }
+  }
+  const { bookQuantity, otherPhysicalQuantity, printQuantity } = quantities;
 
   if (!addressTo) {
     return res.status(400).json({ error: 'AddressTo is required' });
   }
 
   const normalizedAddressTo = normalizeAddress(addressTo);
+  const isInternational = normalizedAddressTo.country !== 'US';
 
   const phone = String(normalizedAddressTo.phone || '').trim();
 

@@ -10,9 +10,26 @@ const transporter = process.env.EMAIL_MODE === 'capture'
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASS,
   },
-  logger: true,  // Enables detailed log of the communication with the email server
-  debug: true,   // More detailed output
+  logger: false,
+  debug: false,
 });
+
+if (process.env.EMAIL_MODE === 'sandbox-smtp') {
+  const recipient = process.env.SANDBOX_EMAIL_RECIPIENT;
+  if (process.env.APP_ENV !== 'staging' || process.env.VERCEL_ENV === 'production' ||
+      !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(recipient || '')) {
+    throw new Error('Sandbox SMTP requires staging and one explicit test recipient');
+  }
+  const sendMail = transporter.sendMail.bind(transporter);
+  transporter.sendMail = async (message) => {
+    const result = await sendMail({ ...message, to: recipient, cc: undefined, bcc: undefined,
+      envelope: { from: process.env.GMAIL_USER, to: [recipient] },
+      subject: `[SANDBOX] ${message.subject}` });
+    console.info('Sandbox email accepted by SMTP:', { messageId: result.messageId,
+      accepted: result.accepted?.length || 0, rejected: result.rejected?.length || 0 });
+    return result;
+  };
+}
 
 if (process.env.EMAIL_MODE === 'capture') {
   const sendMail = transporter.sendMail.bind(transporter);

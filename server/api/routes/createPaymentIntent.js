@@ -1,6 +1,6 @@
 const express = require('express');
 const getStripe = require('../config/stripe');
-const { getSubtotal, toCents } = require('../config/products');
+const { getCartDetails, toCents } = require('../config/products');
 
 const router = express.Router();
 
@@ -21,7 +21,6 @@ router.post('/', async (req, res) => {
     format,
     cartItems,
     address,
-    orderQuantities = {},
     shippingPrice = 0,
   } = req.body;
 
@@ -34,6 +33,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    const cartDetails = getCartDetails(cartItems);
     const hasPhysicalItems = cartItems.some(item => item.requiresShipping || item.format === 'physical');
     const hasDigitalItems = cartItems.some(item => item.format === 'digital' || item.requiresShipping === false);
 
@@ -61,10 +61,10 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const subtotal = getSubtotal(cartItems);
+    const subtotal = cartDetails.subtotal;
     const normalizedShipping = format === 'physical' ? Number(shippingPrice) : 0;
-    const lineItems = cartItems
-      .map(item => `${item.id}:${item.quantity}`)
+    const lineItems = cartDetails.items
+      .map(item => `${item.id}${item.choiceProductId ? '/' + item.choiceProductId : ''}:${item.quantity}`)
       .join(',');
 
     if (!Number.isFinite(normalizedShipping) || normalizedShipping < 0) {
@@ -92,7 +92,7 @@ router.post('/', async (req, res) => {
         shippingPrice: normalizedShipping.toFixed(2),
         total: (subtotal + normalizedShipping).toFixed(2),
         lineItems,
-        orderQuantities: JSON.stringify(orderQuantities),
+        orderQuantities: JSON.stringify(cartDetails.quantities),
         address: address ? JSON.stringify(normalizedAddress) : '',
       },
     });

@@ -3,10 +3,11 @@ import { useCart } from "./CartContext";
 import { Link } from "react-router-dom";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
+import { getMaxQuantity as getItemMaxQuantity, getContentsText } from '../assets/cartProducts';
 
 export const Cart = () => {
   const { cart, removeFromCart, setCart } = useCart();
-  const getMaxQuantity = (item) => item.id === "nandi-book" ? 4 : 5;
+  const getMaxQuantity = (item) => getItemMaxQuantity(item, cart.filter(entry => entry !== item));
 
   const updateQuantity = (index, newQuantity) => {
     if (newQuantity < 1) return;
@@ -14,7 +15,7 @@ export const Cart = () => {
     if (newQuantity > maxQuantity) return;
 
     const updatedCart = [...cart];
-    updatedCart[index].quantity = newQuantity;
+    updatedCart[index] = { ...updatedCart[index], quantity: newQuantity };
     setCart(updatedCart);
   };
   const subtotal = cart.reduce(
@@ -54,6 +55,7 @@ export const Cart = () => {
 
                   <div className="item-info">
                     <h3>{item.name}</h3>
+                    {getContentsText(item) && <p className="bundle-contents">{getContentsText(item)}</p>}
                     <p className="item-format">
                       {item.format ? item.format.charAt(0).toUpperCase() + item.format.slice(1) : "Physical"}
                     </p>

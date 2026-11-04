@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { getCartKey, getMaxQuantity } from '../assets/cartProducts';
 
 const CartContext = createContext();
 const CART_STORAGE_KEY = "slowComicsCart";
-const getMaxQuantity = (item) => item.id === "nandi-book" ? 4 : 5;
 
 export const useCart = () => useContext(CartContext);
 
@@ -24,18 +24,21 @@ export const CartProvider = ({ children }) => {
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find(
-        (item) => item.id === product.id && item.format === product.format
+        (item) => getCartKey(item) === getCartKey(product)
       );
+      const otherItems = prev.filter(item => getCartKey(item) !== getCartKey(product));
+      const maxQuantity = getMaxQuantity(product, otherItems);
+      if (!maxQuantity) return prev;
 
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id && item.format === product.format
-            ? { ...item, quantity: Math.min(item.quantity + product.quantity, getMaxQuantity(item)) }
+          getCartKey(item) === getCartKey(product)
+            ? { ...item, quantity: Math.min(item.quantity + product.quantity, maxQuantity) }
             : item
         );
       }
 
-      return [...prev, product];
+      return [...prev, { ...product, quantity: Math.min(product.quantity, maxQuantity) }];
     });
   };
 

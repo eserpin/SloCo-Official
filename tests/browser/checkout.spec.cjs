@@ -18,6 +18,7 @@ test.beforeEach(async ({ page }) => {
       confirmPayment: async () => window.__paymentFailure
         ? { error: { message: 'Your test card was declined.' } }
         : { paymentIntent: { id: 'pi_browser_test', status: 'succeeded' } },
+      retrievePaymentIntent: async () => ({ paymentIntent: { id: 'pi_browser_redirect', status: 'succeeded' } }),
     });
   });
   page.on('dialog', dialog => dialog.accept());
@@ -93,6 +94,7 @@ test('successful physical payment submits standardized address and clears cart',
   await expect(page).toHaveURL(/\/thank-you$/);
   expect(submitted.address.street1).toBe(address.street1);
   expect(submitted.shippingPrice).toBe(8);
+  expect(submitted.newsletterOptIn).toBe(false);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([]);
 });
 test('declined payment keeps cart and never calls fulfillment', async ({ page }) => {
@@ -106,6 +108,62 @@ test('declined payment keeps cart and never calls fulfillment', async ({ page })
   expect(orders).toBe(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')).length)).toBe(1);
 });
+test('direct digital checkout bypasses the cart and preserves its physical items and pending checkout', async ({ page }) => {
+  await seed(page, [book], 8);
+  await mockPayments(page);
+  let submitted, shippingCalls = 0;
+  await page.route('**/api/shippingCalculation', route => { shippingCalls++; return route.abort(); });
+  await page.route('**/api/placeDigitalOrder', route => { submitted = route.request().postDataJSON(); return route.fulfill({ json: { message: 'Digital order placed' } }); });
+  await page.goto('/buy/nandi-book');
+  await page.getByRole('radio', { name: 'Digital Copy (Download)' }).check();
+  await expect(page.getByRole('button', { name: 'Add to Cart', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Buy digital copy', exact: true }).click();
+  await expect(page).toHaveURL(/\/checkout\/digital$/);
+  await expect(page.getByRole('heading', { name: 'Digital checkout', exact: true })).toBeVisible();
+  await page.getByLabel('Name', { exact: true }).fill(address.name);
+  await page.getByLabel('Email', { exact: true }).fill(address.email);
+  await expect(page.getByRole('button', { name: 'Calculate Shipping' })).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: /Subscribe to our email list/ })).not.toBeChecked();
+  await page.getByRole('checkbox', { name: /Subscribe to our email list/ }).check();
+  await page.getByRole('button', { name: 'Pay $27.00', exact: true }).click();
+  await expect(page).toHaveURL(/\/thank-you$/);
+  expect(submitted.newsletterOptIn).toBe(true);
+  expect(submitted.cartItems).toHaveLength(1);
+  expect(submitted.cartItems[0]).toMatchObject({ id: 'nandi-book', format: 'digital', requiresShipping: false, quantity: 1 });
+  expect(submitted.shippingPrice).toBe(0); expect(submitted.total).toBe(27); expect(shippingCalls).toBe(0);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([book]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsPendingCheckout')).shippingPrice)).toBe(8);
+  expect(await page.evaluate(() => localStorage.getItem('slowComicsPendingDigitalCheckout'))).toBeNull();
+});
+
+test('declined direct digital payment leaves physical cart intact', async ({ page }) => {
+  await seed(page, [book], 8); await mockPayments(page);
+  await page.addInitScript(() => { window.__paymentFailure = true; });
+  let fulfilled = false;
+  await page.route('**/api/placeDigitalOrder', route => { fulfilled = true; return route.abort(); });
+  await page.goto('/checkout/digital');
+  await page.getByLabel('Name', { exact: true }).fill(address.name);
+  await page.getByLabel('Email', { exact: true }).fill(address.email);
+  await page.getByRole('button', { name: 'Pay $27.00', exact: true }).click();
+  await expect(page.getByText('Your test card was declined.')).toBeVisible();
+  expect(fulfilled).toBe(false);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([book]);
+});
+
+test('direct digital Stripe return restores its own checkout and preserves physical cart', async ({ page }) => {
+  await seed(page, [book], 8);
+  await page.addInitScript(address => localStorage.setItem('slowComicsPendingDigitalCheckout', JSON.stringify({ address, shippingPrice: 0, newsletterOptIn: true })), address);
+  let submitted;
+  await page.route('**/api/placeDigitalOrder', route => { submitted = route.request().postDataJSON(); return route.fulfill({ json: { message: 'Digital order placed' } }); });
+  await page.goto('/checkout/digital?payment_intent_client_secret=pi_browser_redirect_secret_mock');
+  await expect(page).toHaveURL(/\/thank-you$/);
+  expect(submitted.transactionId).toBe('pi_browser_redirect');
+  expect(submitted.newsletterOptIn).toBe(true);
+  expect(submitted.cartItems[0].format).toBe('digital');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([book]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsPendingCheckout')).shippingPrice)).toBe(8);
+});
+
 test('digital checkout skips shipping and uses the digital fulfillment endpoint', async ({ page }) => {
   await seed(page, [{ ...book, format: 'digital', requiresShipping: false }]); await mockPayments(page);
   let submitted;
