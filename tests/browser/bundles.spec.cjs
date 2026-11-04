@@ -28,7 +28,7 @@ for (const [id, choice, price, prints, stickers] of [
     await page.goto('/products');
     if (id === 'bundle-slow-comics-ambassador') {
       const ambassador = page.locator('#bundles .product-card').last();
-      await expect(ambassador).toContainText('Slow Comics Ambassador Bundle One of Everything!');
+      await expect(ambassador).toContainText('Slow Comics Ambassador: One of Everything');
       await expect(ambassador.locator('.ambassador-collage img')).toHaveCount(14);
       await ambassador.screenshot({ path: testInfo.outputPath('ambassador-card.png') });
     }

@@ -139,7 +139,7 @@ const ProductList = () => {
                             </span>
                           </div>
                           <h2 className={`product-name${product.includedProductIds ? ' ambassador-title' : ''}`}>
-                            {product.includedProductIds ? <><span>Slow Comics Ambassador Bundle</span>{' '}<span>One of Everything!</span></> : cardName}
+                            {product.includedProductIds ? <><span>Slow Comics Ambassador:</span>{' '}<span>One of Everything</span></> : cardName}
                           </h2>
                           {product.includedProductIds && <p className="bundle-card-choice">1 book · 3 prints · 10 stickers</p>}
                           {product.choiceLabel && <p className="bundle-card-choice">Choose 1 of {product.productIds.length} {choiceName} designs</p>}

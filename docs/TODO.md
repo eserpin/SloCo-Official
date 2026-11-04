@@ -7,7 +7,7 @@ Updated November 3, 2026. Work in this priority order.
 - Book + Collectible Gold Foil Print: $80 ($97 value).
 - Book + any sticker: $30 ($32 value).
 - Book + a base print (Nandi Cover or Blue Dragon): $37 ($42 value).
-- Slow Comics Ambassador Bundle: One of Everything!: $130 ($177 value); one physical book, all three prints, and all ten stickers. Listed last, with a collage of all 14 products.
+- Slow Comics Ambassador: One of Everything — $130 ($177 value); one physical book, all three prints, and all ten stickers. Listed last, with a collage of all 14 products. Shortened name is in the pending feature branch.
 - Show all bundles on the book product page; show the matching bundle on each print page, with that print selected. No bundle options on sticker pages.
 - Add a Bundles shop section linking to the book page with the bundle preselected.
 - Keep each bundle as one cart line, distinguish selected designs, and expand its contents for shipping. Validate prices and choices on the server. Include contents in checkout and order emails.
