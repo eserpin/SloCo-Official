@@ -732,8 +732,10 @@ export const Checkout = ({ digitalOnly = false }) => {
         <form id="checkout-details" ref={checkoutFormRef} onSubmit={calculateShipping} noValidate>
         {isDigitalCheckout && <DigitalPriceField value={digitalPrice} disabled={paymentBusy || Boolean(stripeReturnClientSecret)}
             onChange={value => {
-              latestPaymentIntentKey.current = null;
-              setClientSecret(null); setPaymentIntentLoading(false); setFailedPaymentIntentKey(null); setError(null);
+              if (getDigitalAmountCents(value) !== digitalAmountCents) {
+                latestPaymentIntentKey.current = null;
+                setClientSecret(null); setPaymentIntentLoading(false); setFailedPaymentIntentKey(null); setError(null);
+              }
               setDigitalPrice(value);
               const params = new URLSearchParams(window.location.search);
               params.set('amount', value);
