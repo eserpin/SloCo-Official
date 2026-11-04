@@ -95,9 +95,11 @@ async function attempt(name, run) {
   checkpoint();
   activeScenario = null;
 }
-async function digitalSuccess() {
+async function digitalSuccess(unitAmountCents) {
   const before = mailFiles();
-  const data = payload([{ ...book, format: 'digital', requiresShipping: false }]);
+  const data = payload([{ ...book, format: 'digital', requiresShipping: false,
+    ...(Number.isSafeInteger(unitAmountCents) ? { price: unitAmountCents / 100, unitAmountCents } : {}),
+  }]);
   const testNewsletter = process.argv.includes('--newsletter-test');
   if (testNewsletter) {
     // Explicitly authorized live Kit address; transactional emails still captured locally.
@@ -109,17 +111,26 @@ async function digitalSuccess() {
   assert.equal(paid.status, 'succeeded');
   const response = await fulfill('/api/placeDigitalOrder', { ...data, transactionId: paid.id });
   assert.equal(response.status, 200, `Digital fulfillment returned ${response.status}: ${response.body.error || ''}`);
-  const orders = await pool.query('SELECT id FROM digital_orders WHERE transaction_id = $1', [paid.id]);
+  const orders = await pool.query('SELECT id, amount_paid_cents, currency FROM digital_orders WHERE transaction_id = $1', [paid.id]);
   assert.equal(orders.rowCount, 1);
+  assert.equal(Number(orders.rows[0].amount_paid_cents), Math.round(data.total * 100));
+  assert.equal(orders.rows[0].currency, 'USD');
   const tokens = await pool.query('SELECT uses_left FROM download_tokens WHERE order_id = $1', [orders.rows[0].id]);
   assert.equal(tokens.rowCount, 1); assert.equal(tokens.rows[0].uses_left, 4);
   const emails = newMails(before);
   assert.equal(emails.length, 2); assert.ok(emails.some(mail => mail.text.includes(response.body.downloadLink)));
+  assert.ok(emails.every(mail => mail.text.includes(`Amount paid: $${data.total.toFixed(2)} USD`)));
   const retry = await post('/api/placeDigitalOrder', { ...data, transactionId: paid.id });
   assert.equal(retry.status, 200); assert.equal(retry.body.downloadLink, response.body.downloadLink);
   assert.equal((await pool.query('SELECT id FROM digital_orders WHERE transaction_id = $1', [paid.id])).rowCount, 1);
   assert.equal((await pool.query('SELECT token FROM download_tokens WHERE order_id = $1', [orders.rows[0].id])).rowCount, 1);
   assert.equal(newMails(before).length, 2);
+  if (Number.isSafeInteger(unitAmountCents)) {
+    const tampered = await post('/api/placeDigitalOrder', { ...data, transactionId: paid.id,
+      total: data.total + 1, cartItems: [{ ...data.cartItems[0], unitAmountCents: unitAmountCents + 100, price: data.total + 1 }] });
+    assert.ok(tampered.status >= 400, 'A paid amount cannot be rewritten on fulfillment');
+    assert.equal(newMails(before).length, 2);
+  }
   let newsletter;
   if (testNewsletter) {
     const consents = await pool.query(`SELECT email, status, attempts, subscriber_id, subscriber_state, last_error
@@ -130,6 +141,7 @@ async function digitalSuccess() {
     newsletter = consents.rows[0];
   }
   return { paymentId: paid.id, paymentStatus: paid.status, orderId: orders.rows[0].id, capturedEmails: emails.length,
+    amountPaidCents: Number(orders.rows[0].amount_paid_cents), currency: orders.rows[0].currency,
     newsletter, retry: 'no duplicate order/token/email/consent' };
 }
 async function rejectedPayment(format, declined, items = [{ ...book, format, requiresShipping: format === 'physical' }]) {
@@ -223,6 +235,27 @@ async function main() {
   await new Promise(resolve => server.once('listening', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
   progress(`Sandbox run ${runId}. Live keys rejected; email delivery disabled.`);
+  if (process.argv.includes('--digital-price-bounds')) {
+    await attempt('Digital price bounds: reject below $1 and above $10,000; Stripe accepts maximum setup', async () => {
+      const data = payload([{ ...book, format: 'digital', requiresShipping: false, price: 10000, unitAmountCents: 1000000 }]);
+      for (const cents of [99, 1000001]) {
+        const rejected = await post('/api/createPaymentIntent', { ...data, total: cents / 100,
+          cartItems: [{ ...data.cartItems[0], price: cents / 100, unitAmountCents: cents }] });
+        assert.equal(rejected.status, 400);
+      }
+      const pending = await payment(data);
+      assert.equal(pending.amount, 1000000); assert.equal(pending.livemode, false);
+      await stripe.paymentIntents.cancel(pending.id);
+      return { paymentId: pending.id, maximumSetupCents: pending.amount, statusAfterTest: 'canceled', ordersCreated: 0 };
+    });
+    return;
+  }
+  if (process.argv.includes('--digital-pricing')) {
+    for (const cents of [100, 2000, 2345]) {
+      await attempt(`Pay what you want $${(cents / 100).toFixed(2)}: paid order, stored amount, receipts, retry and mismatch rejection`, () => digitalSuccess(cents));
+    }
+    return;
+  }
   if (process.argv.includes('--concurrency')) {
     await attempt('Six concurrent digital fulfillments create one order, token and email pair', digitalSuccess);
     const bundle = BUNDLES.find(bundle => bundle.includedProductIds);

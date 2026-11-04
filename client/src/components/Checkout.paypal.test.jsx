@@ -44,6 +44,15 @@ afterEach(() => {
   localStorage.clear();
 });
 
+test.each([1, 20, 23.45, 10000])('PayPal payment setup uses the chosen digital amount $%s', total => {
+  act(() => { ReactDOM.render(
+    <MemoryRouter><CartProvider><PayPalPaymentSection address={{}}
+      cart={[]} currency="USD" format="digital" total={total} shippingPrice={0} orderQuantities={{}} />
+    </CartProvider></MemoryRouter>, container); });
+  act(() => container.querySelector('button').click());
+  expect(window.capturePayPalOrder.mock.calls[0][0].purchase_units[0].amount.value).toBe(total.toFixed(2));
+});
+
 test.each([
   ["CA", "CA", "CA"],
   ["Canada", "CA", "CA"],

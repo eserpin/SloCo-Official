@@ -202,3 +202,15 @@ Released the backend first, verified its public API rejected an invalid bundle c
 - Frontend: `dpl_9vm9Me7Dva56AtkVkXM3CWdaTNUj` at https://slowcomics.com.
 
 Production browser smoke checks confirmed four bundle cards, selecting a base-print design, adding it to the cart, entering checkout, and optional unchecked mailing-list boxes on both physical and direct digital checkout. The public build uses a live Stripe publishable key, contains no configured sandbox endpoint or literal server secret, and produced no client exceptions. These post-release checks did not create a live customer payment, order or shipping label. PayPal remains deferred. The release-record follow-up changes only documentation.
+
+## Pay-what-you-want digital implementation — November 4, 2026
+
+Implemented on `codex/pay-what-you-want`, not released to production. The user's final pricing instruction is $20 default, $1 minimum, and the lower shared provider maximum. The implementation uses a conservative $10,000 cap because PayPal's published $60,000 ceiling may be restricted to $10,000; Stripe's published USD ceiling is $999,999.99. Product/checkout copy clearly labels pay-what-you-want, and the checkout amount is editable with matching summaries and payment payloads.
+
+Actual Stripe test run `d5016a25-37bf-488c-8a39-4001f10a549e` passed $1, $20 and $23.45 payments. Each produced exactly one digital order, the correct `amount_paid_cents` and USD currency, one four-use token and two captured receipts showing the amount. Completed retries created no duplicate token/email; changed amounts on fulfillment were rejected. No customer emails were delivered externally.
+
+Bounds run `b925729b-6ed5-4e13-a9cd-dd54eff0d7bd` rejected 99 cents and $10,000.01, then created a Stripe test setup for exactly $10,000 and canceled it without paying or creating an order. No arbitrary amount beyond the shared cap is sent to providers.
+
+The final backend suite passed all 120 cases, including preparing amount columns before payment setup and recovering from a schema failure without creating a charge. Twelve React/PayPal payload cases passed. Desktop/mobile browser checks passed 69 cases with one inapplicable desktop case skipped; these mock payment APIs/SDKs. The initial browser run exposed duplicate redirect completion clearing the physical pending-checkout key. Added a single-completion guard, stable completion callback and captured storage key, then verified custom-price redirects preserve the physical cart and pending shipping details. A Node test-runner IPC serialization failure was resolved by rerunning the same sequential suite; final logs record a complete passing run.
+
+Production and sandbox builds passed. Desktop/mobile screenshot review corrected pale inherited text on the white pricing panel. Local connected preview: http://127.0.0.1:4175/checkout/digital. Raw reports, screenshots and captured emails remain ignored. PayPal buyer approval/capture remains deferred. No production deployment or production database change was made for this feature.

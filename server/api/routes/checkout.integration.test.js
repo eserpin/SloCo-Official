@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const express = require('express');
 const stub = (id, value) => { require.cache[require.resolve(id)] = { id: require.resolve(id), filename: require.resolve(id), loaded: true, exports: value }; };
 let newsletterCalls;
+let paymentReceivedCents, paymentCurrency, paymentMetadata;
 let processingLocks, digitalOrder, digitalTokens, mailGate;
 let queries, messages, labels, status, invalidAddress, failLabel, existing, paymentRequests;
 let records, labelAttempts, shipmentRequests, transactionResults, existingComplete, failShipmentAt, noRates, failCustomerMail;
@@ -50,7 +51,7 @@ stub('../config/mailer', { sendMail: async (mail) => {
   messages.push(mail); return {};
 } });
 stub('../config/stripe', () => ({ paymentIntents: {
-  retrieve: async () => ({ status, amount_received: 100000 }),
+  retrieve: async () => ({ status, amount_received: paymentReceivedCents, currency: paymentCurrency, metadata: paymentMetadata }),
   create: async (payload) => { paymentRequests.push(payload); return { client_secret: 'mock_secret' }; },
 } }));
 stub('../config/shippo', { addressFrom: { country: 'US' }, shippo: {
@@ -90,7 +91,7 @@ test.before(async () => {
 test.after(() => new Promise(resolve => server.close(resolve)));
 test.beforeEach(() => {
   processingLocks = new Set(); digitalOrder = null; digitalTokens = []; mailGate = null;
-  newsletterCalls = [];
+  newsletterCalls = []; paymentReceivedCents = 100000; paymentCurrency = 'usd'; paymentMetadata = {};
   queries = []; messages = []; labels = 0; status = 'succeeded'; invalidAddress = false; failLabel = false; existing = false; paymentRequests = [];
   records = []; labelAttempts = 0; shipmentRequests = 0; transactionResults = []; existingComplete = false; failShipmentAt = 0; noRates = false; failCustomerMail = false;
   splitGermanAddress = false; shipmentPayloads = [];
@@ -201,6 +202,8 @@ test('international payment requires a customs phone number', async () => {
   assert.equal(response.status, 400); assert.equal(paymentRequests.length, 0);
 });
 test('digital checkout stores a download token and emails the download link', async () => {
+  paymentReceivedCents = 2700;
+
   const response = await post('/digital', { ...order(), total: 27, cartItems: [{ ...item, format: 'digital', requiresShipping: false }] });
   assert.equal(response.status, 200); assert.match(response.body.downloadLink, /api\/download\/[a-f0-9]{64}$/);
   assert.ok(queries.some(q => q.sql.includes('INSERT INTO download_tokens') && /VALUES \(\$1, \$2, 4\)/.test(q.sql)));
@@ -210,12 +213,57 @@ test('digital checkout stores a download token and emails the download link', as
 test('configured digital checkout emails the website selection page and correct expiry', async () => {
   process.env.FRONTEND_URL = 'https://shop.example/';
   try {
+    paymentReceivedCents = 2700;
+
     const response = await post('/digital', { ...order(), total: 27, cartItems: [{ ...item, format: 'digital', requiresShipping: false }] });
     assert.equal(response.status, 200);
     assert.match(response.body.downloadLink, /^https:\/\/shop\.example\/download\/[a-f0-9]{64}$/);
     assert.ok(messages[0].text.includes(response.body.downloadLink));
     assert.match(messages[0].text, /4 downloads total and expires in 1 week/);
   } finally { delete process.env.FRONTEND_URL; }
+});
+
+for (const cents of [100, 2000, 2345, 1000000]) {
+  test(`digital price ${cents} cents is used for payment, saved order and canonical receipts`, async () => {
+    paymentReceivedCents = cents; paymentMetadata = { format: 'digital', digitalUnitAmountCents: String(cents) };
+    const data = { ...order(), format: 'digital', total: cents / 100, shippingPrice: 0,
+      cartItems: [{ ...item, name: 'Untrusted name', price: 999999, unitAmountCents: cents, format: 'digital', requiresShipping: false }] };
+    assert.equal((await post('/payment', data)).status, 200);
+    assert.equal(paymentRequests[0].amount, cents);
+    assert.equal(paymentRequests[0].metadata.digitalUnitAmountCents, String(cents));
+    assert.equal((await post('/digital', data)).status, 200);
+    assert.deepEqual(queries.find(q => q.sql.includes('INSERT INTO digital_orders')).values.slice(3), [cents, 'USD']);
+    assert.ok(messages.every(mail => mail.text.includes(`Amount paid: $${(cents / 100).toFixed(2)} USD`)));
+    assert.ok(messages.every(mail => !mail.text.includes('999999') && !mail.text.includes('Untrusted name')));
+  });
+}
+test('digital fulfillment rejects both underpayment and mismatched receipts after an amount edit', async () => {
+  for (const amount of [100, 3000]) {
+    paymentReceivedCents = amount;
+    const result = await post('/digital', { ...order(), total: 20, cartItems: [
+      { ...item, price: 20, unitAmountCents: 2000, format: 'digital', requiresShipping: false },
+    ] });
+    assert.ok(result.status >= 400);
+  }
+  assert.equal(digitalOrder, null); assert.equal(messages.length, 0); assert.equal(digitalTokens.length, 0);
+});
+test('invalid digital amounts never create a PaymentIntent or download order', async () => {
+  for (const cents of [0, 99, -100, 100.5, 1000001, '100', null]) {
+    const data = { ...order(), format: 'digital', total: 1, cartItems: [
+      { ...item, unitAmountCents: cents, format: 'digital', requiresShipping: false },
+    ] };
+    assert.equal((await post('/payment', data)).status, 400);
+    assert.equal((await post('/digital', data)).status, 400);
+  }
+  assert.equal(paymentRequests.length, 0); assert.equal(digitalOrder, null); assert.equal(messages.length, 0);
+});
+test('digital fulfillment rejects wrong currency and a physical payment', async () => {
+  paymentReceivedCents = 2000;
+  const data = { ...order(), total: 20, cartItems: [{ ...item, unitAmountCents: 2000, format: 'digital', requiresShipping: false }] };
+  paymentCurrency = 'eur'; assert.ok((await post('/digital', data)).status >= 400);
+  paymentCurrency = 'usd'; paymentMetadata = { format: 'physical' };
+  assert.ok((await post('/digital', data)).status >= 400);
+  assert.equal(digitalOrder, null); assert.equal(messages.length, 0);
 });
 
 test('Shippo ERROR records the failed transaction and alerts admin without confirming labels', async () => {
@@ -325,7 +373,7 @@ for (const source of ['physical', 'digital']) {
     const gate = new Promise(resolve => { releaseMail = resolve; });
     mailGate = async () => { signalStarted(); await gate; };
     const data = order();
-    if (source === 'digital') { data.total = 27; data.cartItems = [{ ...item, format: 'digital', requiresShipping: false }]; }
+    if (source === 'digital') { paymentReceivedCents = 2700; data.total = 27; data.cartItems = [{ ...item, format: 'digital', requiresShipping: false }]; }
     const endpoint = source === 'digital' ? '/digital' : '/orders';
     const first = post(endpoint, data);
     await started;
@@ -340,7 +388,7 @@ for (const source of ['physical', 'digital']) {
   });
   test(source + ': newsletter opt-in reaches service only after a paid order is saved', async () => {
     const data = { ...order(), newsletterOptIn: true };
-    if (source === 'digital') { data.total = 27; data.cartItems = [{ ...item, format: 'digital', requiresShipping: false }]; }
+    if (source === 'digital') { paymentReceivedCents = 2700; data.total = 27; data.cartItems = [{ ...item, format: 'digital', requiresShipping: false }]; }
     const endpoint = source === 'digital' ? '/digital' : '/orders';
     status = 'requires_payment_method';
     await post(endpoint, data); assert.equal(newsletterCalls.length, 0);

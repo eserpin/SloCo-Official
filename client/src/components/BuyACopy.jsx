@@ -247,14 +247,15 @@ const BuyProduct = () => {
             ) : (
               <div className="price">
                 <span className="discount-price">
-                  ${productData.price} (Digital Download)
+                  Pay what you want
+                  <small className="bundle-value">Digital download · $1 minimum</small>
                 </span>
               </div>
             )}
           </div>
 
           {format === 'digital' ? <>
-            <p className="digital-purchase-note">Digital downloads have their own checkout. Your download link is emailed after payment, and items in your cart stay there.</p>
+            <p className="digital-purchase-note">Choose your price at checkout. Your download link is emailed after payment, and items in your cart stay there.</p>
             <Link to="/checkout/digital" className="checkout-button digital-buy-button">Buy digital copy</Link>
           </> : <button onClick={handleAddToCart} className="checkout-button"
             disabled={Boolean(selectedBundle?.choiceLabel && !choiceProductId) || availableQuantity === 0}>

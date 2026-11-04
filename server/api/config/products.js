@@ -17,12 +17,15 @@ const PRODUCTS = {
 
 const toCents = (amount) => Math.round(Number(amount) * 100);
 const BUNDLES = require('./bundles.json');
+const { getDigitalUnitAmountCents } = require('./digitalPricing');
 
-// Resolve every line from the catalog. Client prices, names, types and contents are untrusted.
+// Physical prices and all names/contents come from the catalog. Digital prices
+// are customer-selected, validated USD amounts with a $1 minimum.
 const getCartDetails = (cartItems = []) => {
   if (!Array.isArray(cartItems) || !cartItems.length) throw new Error('Cart is empty');
   const counts = {};
   const quantities = { bookQuantity: 0, otherPhysicalQuantity: 0, printQuantity: 0 };
+  let digitalLines = 0;
   const items = cartItems.map(item => {
     const bundle = BUNDLES.find(entry => entry.id === item.id);
     const product = bundle || PRODUCTS[item.id];
@@ -45,6 +48,10 @@ const getCartDetails = (cartItems = []) => {
         (format === 'digital' && (bundle || item.id !== 'nandi-book'))) {
       throw new Error(`Invalid format for ${item.id}`);
     }
+    if (format === 'digital' && (quantity !== 1 || ++digitalLines > 1)) {
+      throw new Error('Digital checkout includes one download purchase.');
+    }
+    const unitAmountCents = format === 'digital' ? getDigitalUnitAmountCents(item) : undefined;
     let choiceProductId;
     if (bundle && !bundle.includedProductIds) {
       choiceProductId = bundle.choiceLabel ? item.choiceProductId : bundle.productIds[0];
@@ -62,11 +69,14 @@ const getCartDetails = (cartItems = []) => {
         quantities[key] += quantity;
       });
     }
-    return { id: item.id, name: product.name, price: product.price, quantity, format,
+    return { id: item.id, name: product.name, price: format === 'digital' ? unitAmountCents / 100 : product.price, quantity, format,
+      ...(format === 'digital' ? { unitAmountCents } : {}),
       type: bundle ? 'Bundle' : product.type, requiresShipping: format === 'physical',
       ...(bundle ? { choiceProductId, contents } : {}) };
   });
-  return { items, quantities, subtotal: items.reduce((sum, item) => sum + item.price * item.quantity, 0) };
+  const subtotalCents = items.reduce((sum, item) => sum + (item.unitAmountCents ?? toCents(item.price)) * item.quantity, 0);
+  if (!Number.isSafeInteger(subtotalCents)) throw new Error('Invalid order amount');
+  return { items, quantities, subtotal: subtotalCents / 100, subtotalCents };
 };
 
 const getSubtotal = (cartItems) => getCartDetails(cartItems).subtotal;

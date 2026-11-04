@@ -2,21 +2,21 @@ import React from "react";
 import { products } from "../assets/productInfo";
 import { getCartKey, getContentsText } from '../assets/cartProducts';
 
-const money = (value) => `$${value.toFixed(2)}`;
+const money = (value) => value === null ? '—' : `$${value.toFixed(2)}`;
 
-export const CheckoutTotals = ({ subtotal, shippingPrice, requiresShipping }) => {
+export const CheckoutTotals = ({ subtotal, shippingPrice, requiresShipping, amountPending = false }) => {
   const shippingPending = requiresShipping && shippingPrice === null;
   const total = subtotal + (requiresShipping ? shippingPrice || 0 : 0);
   return (
     <dl className="checkout-summary-totals" aria-live="polite">
-      <div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
+      <div><dt>Subtotal</dt><dd>{money(amountPending ? null : subtotal)}</dd></div>
       {requiresShipping && <div className="checkout-summary-shipping"><dt>Shipping</dt><dd>{shippingPending ? "Not calculated" : money(shippingPrice)}</dd></div>}
-      {!shippingPending && <div className="checkout-summary-total"><dt>Total</dt><dd>{money(total)}</dd></div>}
+      {!shippingPending && <div className="checkout-summary-total"><dt>Total</dt><dd>{money(amountPending ? null : total)}</dd></div>}
     </dl>
   );
 };
 
-const CheckoutSummary = ({ cart, subtotal, shippingPrice, requiresShipping }) => {
+const CheckoutSummary = ({ cart, subtotal, shippingPrice, requiresShipping, amountPending = false }) => {
   const shippingPending = requiresShipping && shippingPrice === null;
   const total = subtotal + (requiresShipping ? shippingPrice || 0 : 0);
   const contents = (
@@ -34,12 +34,12 @@ const CheckoutSummary = ({ cart, subtotal, shippingPrice, requiresShipping }) =>
                 {getContentsText(item) && <small>{getContentsText(item)}</small>}
                 <small>{item.format === "digital" ? "Digital copy · " : isBook ? "Physical copy · " : ""}Qty {item.quantity}</small>
               </div>
-              <span className="checkout-summary-item-price">{money(item.price * item.quantity)}</span>
+              <span className="checkout-summary-item-price">{money(amountPending ? null : item.price * item.quantity)}</span>
             </li>
           );
         })}
       </ul>
-      <CheckoutTotals subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping={requiresShipping} />
+      <CheckoutTotals subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping={requiresShipping} amountPending={amountPending} />
     </>
   );
 
@@ -52,7 +52,7 @@ const CheckoutSummary = ({ cart, subtotal, shippingPrice, requiresShipping }) =>
       <details className="checkout-summary checkout-mobile-summary">
         <summary>
           <span>Order summary</span>
-          <span className="checkout-mobile-amount"><small>{shippingPending ? "Subtotal" : "Total"}</small><strong>{money(total)}</strong></span>
+          <span className="checkout-mobile-amount"><small>{shippingPending ? "Subtotal" : "Total"}</small><strong>{money(amountPending ? null : total)}</strong></span>
         </summary>
         {contents}
       </details>

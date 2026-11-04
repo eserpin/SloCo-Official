@@ -680,6 +680,15 @@
   .phone-label-note { font-size: 0.85em; font-weight: normal; }
   .newsletter-opt-in { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; font-size: 0.95rem; line-height: 1.4; cursor: pointer; }
   .newsletter-opt-in input { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: #4a548a; }
+  .digital-price-choice { padding: 18px 20px; margin-bottom: 24px; border: 1px solid #cbd6ca; border-radius: 6px; background: #fff; }
+  .digital-price-choice h2 { margin: 0 0 8px; font-size: 1.5rem; }
+  .digital-price-choice h2, .digital-price-choice p { color: #4a548a; }
+  .digital-price-choice p { margin: 0 0 12px; }
+  .digital-price-choice label { display: block; margin-bottom: 6px; }
+  .digital-price-input { display: flex; align-items: center; gap: 8px; font-size: 1.35rem; }
+  .digital-price-input input { box-sizing: border-box; width: 180px; max-width: 100%; padding: 10px; border: 1px solid #b7c9ba; border-radius: 4px; font: inherit; }
+  .digital-price-input input:focus-visible { outline: 2px solid #4a548a; outline-offset: 2px; }
+  .digital-price-choice .field-error { margin-top: 8px; margin-bottom: 0; color: #a12727; }
   @media (max-width: 1023px) {
     .checkout-container { max-width: 640px; }
     .checkout-layout { display: flex; flex-direction: column; gap: 24px; }

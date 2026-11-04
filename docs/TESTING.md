@@ -190,6 +190,18 @@ Recorded outcomes: [Sandbox verification results](SANDBOX_RESULTS.md).
 
 ## Concurrent order requests and receipt delivery
 
+## Pay what you want for digital downloads
+
+Run `npm --prefix server run test:sandbox -- --digital-pricing` for real Stripe test purchases at $1, $20 and $23.45, saved paid amounts, canonical receipts, token creation, safe retries and post-payment amount-mismatch rejection. `--digital-price-bounds` checks rejection below $1/above $10,000 and creates then cancels an uncharged Stripe test setup at the maximum. Both use the isolated staging database and captured emails.
+
+Digital pricing uses validated integer `unitAmountCents`; new checkout defaults to $20 and accepts $1–$10,000 USD. This is the conservative shared cap selected after reviewing [Stripe USD limits](https://docs.stripe.com/currencies#maximum-charge-amounts) and [PayPal sending limits](https://securepayments.paypal.com/us/cshelp/article/what%E2%80%98s-the-maximum-amount-i-can-send-with-my-paypal-account-help286). Individual buyer/card limits may be lower. Physical/bundle prices remain catalog-controlled. Older open digital tabs sending only `price` remain supported after strict amount validation.
+
+Digital payment setup prepares nullable `digital_orders.amount_paid_cents BIGINT` and `currency TEXT` columns before creating a PaymentIntent. Schema failure therefore blocks setup before a charge; retry can recover. Existing rows are left unknown until a verified retry backfills them. Deploy the backend before the frontend. Stripe fulfillment checks exact paid cents, USD and digital payment metadata; receipts and persisted values use the server-resolved amount. PayPal payload amounts are tested; real PayPal buyer capture is still deferred.
+
+Browser checks cover editable defaults/bounds, exact cents, summary/payment refresh, provider errors without retry loops, old setup responses, amount locking during payment, redirect amount restoration, single completion, and preserving physical cart/pending checkout. The public-facing download window and four-download allowance are unchanged.
+
+## Concurrent order requests and receipt delivery
+
 `node scripts/verify-deployed-bundles.cjs` runs the deployed bundle browser/return-flow checks. It reads ignored `server/sandbox-results/deployed-preview-access.json` containing `frontendShare` (a deployment-specific Vercel share URL) and `backendOrigin`, plus local isolated staging credentials. Use `negative` for invalid-choice/mixed-cart/declined-payment checks, `card` to attempt actual card entry, or `bundle-id:US` / `bundle-id:CA` for one configured case. The default suite uses sandbox API payment confirmation followed by the real Stripe.js browser return; it does not mock services and does not claim to complete the browser card form. Human verification requires a user-operated checkout. Evidence, screenshots, raw diagnostics and label PDFs stay ignored. Never commit access links or publish raw diagnostics.
 
 Run `npm --prefix server run test:sandbox -- --concurrency` for six simultaneous fulfillment requests per Stripe test payment, covering digital and Ambassador purchases. The test uses the isolated staging database, real Stripe/Shippo test services, and captured emails. It verifies one order, one token or the expected labels, one customer/admin email pair, and safe completed-order retries.

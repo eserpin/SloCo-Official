@@ -5,11 +5,12 @@ const pool = require('../config/db');
 const transporter = require('../config/mailer');
 const crypto = require('crypto');
 const getStripe = require('../config/stripe');
-const { getSubtotal, toCents } = require('../config/products');
+const { getCartDetails, getCartSummary, toCents } = require('../config/products');
+const { ensureDigitalOrderAmounts } = require('../services/digitalOrderAmounts');
 const { getDownloadPageLink } = require('../services/downloadLinks');
 const router = express.Router();
 
-const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total }) => {
+const verifyPayment = async ({ transactionId, cartItems, cartDetails, paymentProvider, total }) => {
   if (!transactionId || typeof transactionId !== 'string') {
     throw new Error('Invalid payment transaction');
   }
@@ -18,14 +19,15 @@ const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total 
     throw new Error('Shipped items must be checked out separately from digital downloads');
   }
 
-  const subtotal = getSubtotal(cartItems || []);
+  const subtotal = cartDetails.subtotal;
+  const amountPaidCents = cartDetails.subtotalCents;
 
   if (total !== undefined && total !== null && toCents(total) !== toCents(subtotal)) {
     throw new Error('Order total does not match cart subtotal');
   }
 
   if (paymentProvider === 'paypal' || !transactionId.startsWith('pi_')) {
-    return { id: transactionId, paymentProvider: 'paypal' };
+    return { id: transactionId, paymentProvider: 'paypal', amountPaidCents, currency: 'USD' };
   }
 
   const paymentIntent = await getStripe().paymentIntents.retrieve(transactionId);
@@ -34,11 +36,13 @@ const verifyPayment = async ({ transactionId, cartItems, paymentProvider, total 
     throw new Error(`Payment has not succeeded. Current status: ${paymentIntent.status}`);
   }
 
-  if (paymentIntent.amount_received < toCents(subtotal)) {
-    throw new Error('Payment amount is less than the order total');
+  if (paymentIntent.amount_received !== amountPaidCents || paymentIntent.currency !== 'usd') {
+    throw new Error('Payment amount or currency does not match the digital order');
   }
+  if (paymentIntent.metadata?.format && paymentIntent.metadata.format !== 'digital') throw new Error('Payment is not for a digital order');
+  if (paymentIntent.metadata?.digitalUnitAmountCents && Number(paymentIntent.metadata.digitalUnitAmountCents) !== amountPaidCents) throw new Error('Digital price does not match the payment');
 
-  return paymentIntent;
+  return { ...paymentIntent, amountPaidCents, currency: 'USD' };
 };
 
 router.post('/', async (req, res) => {
@@ -57,13 +61,17 @@ router.post('/', async (req, res) => {
   if (!name || !email || !transactionId || !cartItems?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+  let cartDetails;
+  try { cartDetails = getCartDetails(cartItems); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
 
   try {
-    await verifyPayment({ transactionId, cartItems, paymentProvider, total });
+    const payment = await verifyPayment({ transactionId, cartItems, cartDetails, paymentProvider, total });
     releaseProcessingLock = await acquireOrderProcessingLock({ pool, transactionId });
     if (!releaseProcessingLock) {
       return res.status(409).json({ error: 'This payment is already being processed. Please wait before retrying. If this persists, contact us.', code: 'ORDER_PROCESSING' });
     }
+    await ensureDigitalOrderAmounts(pool);
 
     const existingOrder = await pool.query(
       'SELECT id, name, email FROM digital_orders WHERE transaction_id = $1 LIMIT 1',
@@ -73,6 +81,8 @@ router.post('/', async (req, res) => {
     let orderId = existingOrder.rows[0]?.id;
 
     if (orderId) {
+      await pool.query(`UPDATE digital_orders SET amount_paid_cents = COALESCE(amount_paid_cents, $2),
+        currency = COALESCE(currency, $3) WHERE id = $1`, [orderId, payment.amountPaidCents, payment.currency]);
       await recordNewsletterConsent({ optedIn: req.body.newsletterOptIn,
         email: existingOrder.rows[0].email || email, name: existingOrder.rows[0].name || name,
         transactionId, source: 'digital' });
@@ -95,9 +105,9 @@ router.post('/', async (req, res) => {
 
     if (!orderId) {
       const orderResult = await pool.query(
-        `INSERT INTO digital_orders (name, email, transaction_id)
-         VALUES ($1, $2, $3) RETURNING id`,
-        [name, email, transactionId]
+        `INSERT INTO digital_orders (name, email, transaction_id, amount_paid_cents, currency)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [name, email, transactionId, payment.amountPaidCents, payment.currency]
       );
 
       orderId = orderResult.rows[0].id;
@@ -116,18 +126,16 @@ router.post('/', async (req, res) => {
     );
 
     const downloadLink = getDownloadPageLink(token);
+    const cartSummary = getCartSummary(cartDetails.items);
+    const amountPaid = `$${(payment.amountPaidCents / 100).toFixed(2)} USD`;
 
     // Email the user
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your Digital Copy of Nandi and the Castle in the Sea',
-      text: `Thank you for your purchase! Your link includes 4 downloads total and expires in 1 week.\n\nDownload your book here:\n${downloadLink}\n\n`,
+      text: `Thank you for your purchase!\n\nAmount paid: ${amountPaid}\n${cartSummary}\n\nYour link includes 4 downloads total and expires in 1 week.\n\nDownload your book here:\n${downloadLink}\n\n`,
     });
-
-    const cartSummary = (cartItems && cartItems.length)
-      ? cartItems.map(item => `- ${item.name} x ${item.quantity} @ $${Number(item.price).toFixed(2)} = $${(Number(item.price) * item.quantity).toFixed(2)}`).join('\n')
-      : 'No itemized cart details were sent.';
 
     const paymentMethod = paymentProvider === 'paypal' ? 'PayPal' : 'Stripe';
 
@@ -135,7 +143,7 @@ router.post('/', async (req, res) => {
       from: process.env.GMAIL_USER,
       to: 'slow.comics.publishing@gmail.com',
       subject: `Digital Order Received #${transactionId}`,
-      text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nDownload link sent to customer: ${downloadLink}`,
+      text: `New digital order received!\n\nOrder ID: ${transactionId}\nPayment Method: ${paymentMethod}\nCustomer: ${name}\nEmail: ${email}\nAmount paid: ${amountPaid}\n\nPurchase Details:\n${cartSummary}\n\nOrder Notes:\n${normalizedOrderNote || 'None provided'}\n\nDownload link sent to customer: ${downloadLink}`,
     });
 
     await respond(200, {

@@ -19,11 +19,13 @@ Print packaging: up to five prints per package, always separate from the book pa
 
 Validation: backend/React regressions, production build, desktop/mobile browser checks, and actual Stripe/Shippo/staging-database bundle runs passed. Deployed Preview tests passed all four bundles, Canadian shipping, orders/labels, browser Stripe returns, thank-you/cart clearing, SMTP delivery, duplicate retries, and simultaneous requests. A user-operated deployed mixed bundle/standalone card purchase passed independent payment, order, label, SMTP and Kit-consent read-back. Released to main and both production projects November 4; public-site bundle selection/cart and both signup checkboxes passed smoke checks, with live Stripe settings and no client errors. PayPal buyer testing remains deferred. Details: [Sandbox results](SANDBOX_RESULTS.md#production-release--november-4-2026).
 
-## 2. Pay what you want for digital downloads — queued
+## 2. Pay what you want for digital downloads — implemented locally; awaiting review/release
 
 - Digital UX prerequisite implemented: selecting digital on the book page opens a direct "Buy digital copy" checkout at `/checkout/digital`, without adding a download to the cart or clearing existing physical items. Digital payment-return state is stored separately from the physical checkout.
-- Let customers choose a price with a $1 minimum and no maximum.
-- Validate the amount on the server and use it consistently for payment, order creation, and receipts.
+- Editable digital price defaults to $20, with a $1 minimum and $10,000 maximum. The user revised the original no-maximum request on November 4 to use the lower shared provider limit; PayPal can cap transactions at $10,000.
+- Product page says "Pay what you want"; checkout shows the editable USD amount near the top. Invalid amounts disable payment, and the summary/payment setup updates when the price changes.
+- The backend validates whole cents and preserves authoritative physical/bundle pricing. Stripe digital fulfillment requires an exact match to the paid amount/currency. Digital orders store `amount_paid_cents` and `currency`; receipts use canonical item names and the chosen amount.
+- Actual sandbox purchases at $1, $20 and $23.45 passed order, receipt, token and retry checks. Boundary setup at $10,000 passed and was canceled; out-of-range requests were rejected. All 120 backend, 12 React and 69 browser checks passed (one skipped). Fixed a digital redirect completion race found in browser tests. Production is unchanged; implementation is on `codex/pay-what-you-want`.
 
 ## 3. Private order portal — queued
 

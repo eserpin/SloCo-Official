@@ -19,6 +19,7 @@ import countryCodes from "../assets/countryCodes";
 import { getShippingQuantities } from '../assets/cartProducts';
 import { products } from '../assets/productInfo';
 import PrintShippingNotice from './PrintShippingNotice';
+import { DEFAULT_DIGITAL_PRICE, MAX_DIGITAL_PRICE, getDigitalAmountCents } from '../assets/digitalPricing';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || "");
 const paypalClientId = process.env.REACT_APP_PAYPAL_CLIENT_ID || "";
@@ -26,7 +27,7 @@ const PENDING_CHECKOUT_KEY = "slowComicsPendingCheckout";
 const DIGITAL_PENDING_CHECKOUT_KEY = 'slowComicsPendingDigitalCheckout';
 const getCheckoutStorageKey = () => window.location.pathname === '/checkout/digital' ? DIGITAL_PENDING_CHECKOUT_KEY : PENDING_CHECKOUT_KEY;
 const bookProduct = products.find(product => product.id === 'nandi-book');
-const digitalCart = [{ id: bookProduct.id, name: bookProduct.name, price: bookProduct.price, type: bookProduct.type,
+const digitalCart = [{ id: bookProduct.id, name: bookProduct.name, price: Number(DEFAULT_DIGITAL_PRICE), type: bookProduct.type,
   quantity: 1, format: 'digital', requiresShipping: false, image: bookProduct.images[0].url }];
 const FULFILLED_PAYMENT_KEY = "slowComicsFulfilledPaymentIntent";
 const INTERNATIONAL_PHONE_REQUIRED_MESSAGE =
@@ -51,8 +52,8 @@ const savePendingCheckout = (payload) => {
   window.localStorage.setItem(getCheckoutStorageKey(), JSON.stringify(payload));
 };
 
-const clearPendingCheckout = () => {
-  window.localStorage.removeItem(getCheckoutStorageKey());
+const clearPendingCheckout = (storageKey = getCheckoutStorageKey()) => {
+  window.localStorage.removeItem(storageKey);
 };
 
 const getCartShape = (cart) => {
@@ -80,6 +81,7 @@ const getCartItemsForOrder = (cart) =>
     type: item.type,
     requiresShipping: item.requiresShipping,
     ...(item.choiceProductId ? { choiceProductId: item.choiceProductId } : {}),
+    ...(item.format === 'digital' ? { unitAmountCents: item.unitAmountCents ?? getDigitalAmountCents(item.price) } : {}),
   }));
 
 const getOrderPayload = ({
@@ -172,6 +174,7 @@ const fulfillOrder = async (payload, format) => {
 };
 
 const StripePaymentForm = ({
+  onPaymentBusyChange,
   preserveCart = false,
   address,
   cart,
@@ -190,7 +193,9 @@ const StripePaymentForm = ({
   const history = useHistory();
   const { clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
+  useEffect(() => { onPaymentBusyChange?.(submitting); }, [submitting, onPaymentBusyChange]);
   const [paymentError, setPaymentError] = useState(null);
+  const fulfillmentInProgress = useRef(null);
   const returnClientSecret = getStripeReturnClientSecret();
   const billingCountryCode = countryCodes[address.country] || address.country;
   const paymentElementOptions = {
@@ -212,6 +217,9 @@ const StripePaymentForm = ({
   };
 
   const finishSuccessfulPayment = useCallback(async (paymentIntentId) => {
+    if (fulfillmentInProgress.current === paymentIntentId) return;
+    fulfillmentInProgress.current = paymentIntentId;
+    const pendingStorageKey = getCheckoutStorageKey();
     try {
       const payload = getOrderPayload({
         address,
@@ -231,11 +239,12 @@ const StripePaymentForm = ({
       recordPurchase({ cart, currency, shippingPrice, total, transactionId: paymentIntentId });
       window.localStorage.setItem(FULFILLED_PAYMENT_KEY, paymentIntentId);
       onOrderComplete();
-      clearPendingCheckout();
+      clearPendingCheckout(pendingStorageKey);
       if (!preserveCart) clearCart();
       alert(getSuccessMessage(format));
       history.push("/thank-you");
     } catch (error) {
+      fulfillmentInProgress.current = null;
       console.error("Order fulfillment error:", error);
       setPaymentError(
         "Your payment succeeded, but we could not finish the order automatically. Please contact Slow Comics with your payment ID."
@@ -354,6 +363,7 @@ const StripePaymentForm = ({
 };
 
 export const PayPalPaymentSection = ({
+  onPaymentBusyChange,
   preserveCart = false,
   address,
   cart,
@@ -371,8 +381,9 @@ export const PayPalPaymentSection = ({
   const { clearCart } = useCart();
   const [paypalError, setPaypalError] = useState(null);
 
-  const createOrder = (data, actions) =>
-    actions.order.create({
+  const createOrder = (data, actions) => {
+    onPaymentBusyChange?.(true);
+    return actions.order.create({
       purchase_units: [
         {
           amount: {
@@ -393,9 +404,11 @@ export const PayPalPaymentSection = ({
           }),
         },
       ],
-    });
+    }).catch(error => { onPaymentBusyChange?.(false); throw error; });
+  };
 
   const onApprove = async (data, actions) => {
+    const pendingStorageKey = getCheckoutStorageKey();
     setPaypalError(null);
 
     try {
@@ -418,7 +431,7 @@ export const PayPalPaymentSection = ({
       await fulfillOrder(payload, format);
       recordPurchase({ cart, currency, shippingPrice, total, transactionId });
       onOrderComplete();
-      clearPendingCheckout();
+      clearPendingCheckout(pendingStorageKey);
       if (!preserveCart) clearCart();
       alert(getSuccessMessage(format));
       history.push("/thank-you");
@@ -427,6 +440,8 @@ export const PayPalPaymentSection = ({
       setPaypalError(
         "Your PayPal payment may have completed, but we could not finish the order automatically. Please contact Slow Comics with your PayPal transaction ID."
       );
+    } finally {
+      onPaymentBusyChange?.(false);
     }
   };
 
@@ -441,9 +456,11 @@ export const PayPalPaymentSection = ({
         createOrder={createOrder}
         onApprove={onApprove}
         onError={(error) => {
+          onPaymentBusyChange?.(false);
           console.error("PayPal checkout error:", error);
           setPaypalError("PayPal checkout could not be completed. Please try again.");
         }}
+        onCancel={() => onPaymentBusyChange?.(false)}
         fundingSource="paypal"
       />
 
@@ -459,7 +476,16 @@ export const Checkout = ({ digitalOnly = false }) => {
   const pendingCheckout = getPendingCheckout();
   const stripeReturnClientSecret = getStripeReturnClientSecret();
   const { cart: savedCart } = useCart();
-  const cart = digitalOnly ? digitalCart : savedCart;
+  const baseCart = digitalOnly ? digitalCart : savedCart;
+  const isDigitalCheckout = baseCart.length > 0 && baseCart.every(item => item.format === 'digital' && !item.requiresShipping);
+  const [digitalPrice, setDigitalPrice] = useState(() => {
+    const savedPrice = pendingCheckout?.cart?.find(item => item.format === 'digital')?.price;
+    return savedPrice !== undefined && getDigitalAmountCents(savedPrice) !== null ? Number(savedPrice).toFixed(2) : DEFAULT_DIGITAL_PRICE;
+  });
+  const digitalAmountCents = getDigitalAmountCents(digitalPrice);
+  const cart = useMemo(() => isDigitalCheckout ? baseCart.map(item => ({ ...item,
+    price: (digitalAmountCents ?? 0) / 100, unitAmountCents: digitalAmountCents,
+  })) : baseCart, [baseCart, isDigitalCheckout, digitalAmountCents]);
   const history = useHistory();
   const [address, setAddress] = useState(pendingCheckout?.address || {
     name: "",
@@ -482,7 +508,10 @@ export const Checkout = ({ digitalOnly = false }) => {
   const [error, setError] = useState(null);
   const [clientSecret, setClientSecret] = useState(stripeReturnClientSecret || null);
   const [paymentIntentLoading, setPaymentIntentLoading] = useState(false);
+  const [failedPaymentIntentKey, setFailedPaymentIntentKey] = useState(null);
+  const [paymentBusy, setPaymentBusy] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const handleOrderComplete = useCallback(() => setOrderComplete(true), []);
   const latestPaymentIntentKey = useRef(null);
   const latestShippingRequest = useRef(0);
   const checkoutFormRef = useRef(null);
@@ -503,6 +532,7 @@ export const Checkout = ({ digitalOnly = false }) => {
     address.email &&
     hasRequiredInternationalPhone &&
     !cartShape.hasMixedFulfillment &&
+    (!isDigitalCheckout || digitalAmountCents !== null) &&
     (cartShape.format === "digital" || shippingPrice !== null);
   const paymentIntentKey = useMemo(
     () =>
@@ -531,6 +561,7 @@ export const Checkout = ({ digitalOnly = false }) => {
   }, [cart, address.email, address.name, stripeReturnClientSecret]);
 
   const handleAddressChange = useCallback((updates) => {
+    setFailedPaymentIntentKey(null);
     latestShippingRequest.current += 1;
     latestPaymentIntentKey.current = null;
     setAddress((previous) => {
@@ -560,6 +591,7 @@ export const Checkout = ({ digitalOnly = false }) => {
   }, []);
 
   const calculateShipping = async (event) => {
+    setFailedPaymentIntentKey(null);
     event?.preventDefault();
     if (cartShape.format !== "physical") return;
     const requestId = ++latestShippingRequest.current;
@@ -652,7 +684,8 @@ export const Checkout = ({ digitalOnly = false }) => {
     } catch (error) {
       console.error("Payment setup error:", error);
       if (latestPaymentIntentKey.current === requestKey) {
-        setError("We could not start checkout. Please try again in a moment.");
+        setFailedPaymentIntentKey(requestKey);
+        setError(error.response?.data?.error || "We could not start checkout. Please try again in a moment.");
       }
     } finally {
       if (latestPaymentIntentKey.current === requestKey) {
@@ -662,7 +695,7 @@ export const Checkout = ({ digitalOnly = false }) => {
   }, [address, canCreatePayment, cart, cartShape, currency, orderNote, shippingPrice, subtotal, total]);
 
   useEffect(() => {
-    if (stripeReturnClientSecret || !canCreatePayment || clientSecret || paymentIntentLoading) return;
+    if (stripeReturnClientSecret || !canCreatePayment || clientSecret || paymentIntentLoading || failedPaymentIntentKey === paymentIntentKey) return;
     latestPaymentIntentKey.current = paymentIntentKey;
     const paymentIntentTimer = window.setTimeout(() => {
       createPaymentIntent(paymentIntentKey);
@@ -675,6 +708,7 @@ export const Checkout = ({ digitalOnly = false }) => {
     createPaymentIntent,
     paymentIntentKey,
     paymentIntentLoading,
+    failedPaymentIntentKey,
     stripeReturnClientSecret,
   ]);
 
@@ -686,10 +720,27 @@ export const Checkout = ({ digitalOnly = false }) => {
         {digitalOnly && <p className="digital-purchase-note">Your download link will be emailed after payment. {savedCart.length > 0 && 'Items in your shopping cart are purchased separately and will stay in your cart.'}</p>}
 
         <div className="checkout-layout">
-        <CheckoutSummary cart={cart} subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping={cartShape.format === "physical"} />
+        <CheckoutSummary cart={cart} subtotal={subtotal} shippingPrice={shippingPrice} requiresShipping={cartShape.format === "physical"} amountPending={isDigitalCheckout && digitalAmountCents === null} />
         <div className="checkout-main">
 
         <form id="checkout-details" ref={checkoutFormRef} onSubmit={calculateShipping} noValidate>
+        {isDigitalCheckout && <section className="digital-price-choice" aria-labelledby="digital-price-heading">
+          <h2 id="digital-price-heading">Pay what you want</h2>
+          <p id="digital-price-help">$1 minimum. Change the amount to what works for you.</p>
+          <label htmlFor="digital-price">Your price (USD)</label>
+          <div className="digital-price-input"><span aria-hidden="true">$</span><input
+            id="digital-price" name="digitalPrice" type="number" inputMode="decimal" min="1" max={MAX_DIGITAL_PRICE} step="0.01"
+            value={digitalPrice} disabled={paymentBusy || Boolean(stripeReturnClientSecret)}
+            aria-describedby={`digital-price-help${digitalAmountCents === null ? ' digital-price-error' : ''}`}
+            aria-invalid={digitalAmountCents === null}
+            onChange={event => {
+              latestPaymentIntentKey.current = null;
+              setClientSecret(null); setPaymentIntentLoading(false); setFailedPaymentIntentKey(null); setError(null);
+              setDigitalPrice(event.target.value);
+            }}
+          /></div>
+          {digitalAmountCents === null && <p className="field-error" id="digital-price-error">Enter between $1 and $10,000, with up to two decimal places.</p>}
+        </section>}
         <div className="address-form">
           <label>
             Name
@@ -811,6 +862,8 @@ export const Checkout = ({ digitalOnly = false }) => {
         )}
 
         {error && <p className="error">{error}</p>}
+        {failedPaymentIntentKey === paymentIntentKey && !clientSecret && <button type="button" className="confirm-button"
+          onClick={() => setFailedPaymentIntentKey(null)}>Retry payment setup</button>}
 
         {cartShape.hasMixedFulfillment && (
           <p className="error">
@@ -839,13 +892,14 @@ export const Checkout = ({ digitalOnly = false }) => {
               }}
             >
               <StripePaymentForm
+                onPaymentBusyChange={setPaymentBusy}
                 preserveCart={digitalOnly}
                 address={address}
                 cart={cart}
                 currency={currency}
                 format={cartShape.format}
                 isInternational={isInternational}
-                onOrderComplete={() => setOrderComplete(true)}
+                onOrderComplete={handleOrderComplete}
                 newsletterOptIn={newsletterOptIn}
                 orderNote={orderNote}
                 orderQuantities={cartShape}
@@ -857,13 +911,14 @@ export const Checkout = ({ digitalOnly = false }) => {
             {paypalClientId && (
               <PayPalScriptProvider options={{ "client-id": paypalClientId, currency }}>
                 <PayPalPaymentSection
+                  onPaymentBusyChange={setPaymentBusy}
                   preserveCart={digitalOnly}
                   address={address}
                   cart={cart}
                   currency={currency}
                   format={cartShape.format}
                   isInternational={isInternational}
-                  onOrderComplete={() => setOrderComplete(true)}
+                  onOrderComplete={handleOrderComplete}
                   newsletterOptIn={newsletterOptIn}
                   orderNote={orderNote}
                   orderQuantities={cartShape}

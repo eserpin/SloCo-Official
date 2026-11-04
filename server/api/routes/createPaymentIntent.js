@@ -1,6 +1,8 @@
 const express = require('express');
 const getStripe = require('../config/stripe');
 const { getCartDetails, toCents } = require('../config/products');
+const pool = require('../config/db');
+const { ensureDigitalOrderAmounts } = require('../services/digitalOrderAmounts');
 
 const router = express.Router();
 
@@ -45,6 +47,9 @@ router.post('/', async (req, res) => {
         error: 'Digital downloads and shipped items must be checked out separately',
       });
     }
+    if (hasDigitalItems && currency.toLowerCase() !== 'usd') {
+      return res.status(400).json({ error: 'Digital prices must be in USD' });
+    }
 
     if (format === 'physical' && !hasPhysicalItems) {
       return res.status(400).json({ error: 'Physical checkout requires shipped items' });
@@ -80,6 +85,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Order total is too low' });
     }
 
+    // Prepare the amount columns before a customer can pay, so schema failures
+    // cannot first appear after their card has already been charged.
+    if (hasDigitalItems) await ensureDigitalOrderAmounts(pool);
     const paymentIntent = await getStripe().paymentIntents.create({
       amount,
       currency: currency.toLowerCase(),
@@ -88,6 +96,7 @@ router.post('/', async (req, res) => {
         enabled: true,
       },
       metadata: {
+        ...(hasDigitalItems ? { digitalUnitAmountCents: String(cartDetails.items[0].unitAmountCents) } : {}),
         name,
         email,
         format,
@@ -105,6 +114,9 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Stripe PaymentIntent error:', error);
+    if (error.type === 'StripeInvalidRequestError' && error.param === 'amount') {
+      return res.status(400).json({ error: 'Our payment provider could not process this amount. Please choose another amount or contact us.' });
+    }
     res.status(500).json({
       error: 'Could not create payment intent',
       details: error.message,
