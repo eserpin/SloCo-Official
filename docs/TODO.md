@@ -38,7 +38,7 @@ Validation: backend/React regressions, production build, desktop/mobile browser 
 
 ## Mailing list — released November 4, 2026
 
-- Add an optional, unchecked checkbox to both physical and direct digital checkout: "Subscribe to our email list to be notified about future projects."
+- Both checkouts have the optional signup checkbox. Per the November 4 follow-up, the current feature branch preselects it by default and preserves an explicit unchecked choice on retries/returns. This default change awaits release with the digital pricing updates.
 - Subscribe only customers who opt in; retain consent and avoid duplicate subscriptions on payment/order retries.
 - Keep a mailing-list service failure from blocking a successful purchase; retain the signup for retry.
 - Use the provider for announcements and unsubscribe management. Existing order/download emails remain independent of marketing opt-in.

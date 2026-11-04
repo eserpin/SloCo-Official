@@ -1,10 +1,10 @@
 # Checkout mailing list
 
-Both checkouts offer an unchecked opt-in: “Subscribe to our email list to be notified about future projects.” It is separate from the required purchase email address and transactional receipts. Stripe redirect state retains the checkbox choice; Stripe and PayPal fulfillment payloads include a strict boolean `newsletterOptIn`.
+Both checkouts offer an optional, preselected signup: “Subscribe to our email list to be notified about future projects.” Customers can uncheck it. A saved unchecked choice stays unchecked on payment retries and returns. It is separate from the required purchase email address and transactional receipts. Stripe redirect state retains the checkbox choice; Stripe and PayPal fulfillment payloads include a strict boolean `newsletterOptIn`.
 
-After payment verification and order creation, the backend saves affirmative consent in `newsletter_consents`: transaction ID, email, name, checkout source, exact consent wording and timestamp. No newsletter record is created for unchecked consent. The table is created on first opt-in using the same database as orders.
+After payment verification and order creation, a selected signup is recorded in `newsletter_consents`: transaction ID, email, name, checkout source, exact checkbox wording and timestamp. No newsletter record is created when the checkbox is unchecked. The table is created on first signup using the same database as orders.
 
-The server calls Kit V4's subscriber upsert with `KIT_API_KEY`. New subscribers become active through the explicit checkout opt-in. This does not send a welcome email or enroll anyone in a sequence. Kit preserves existing subscriber states, including unsubscribed and bounced, so checkout retries cannot reactivate those subscribers. Announcements are sent from Kit, which manages unsubscribe links.
+The server calls Kit V4's subscriber upsert with `KIT_API_KEY`. New subscribers become active when checkout's signup checkbox is selected. This does not send a welcome email or enroll anyone in a sequence. Kit preserves existing subscriber states, including unsubscribed and bounced, so checkout retries cannot reactivate those subscribers. Announcements are sent from Kit, which manages unsubscribe links.
 
 Configure a **V4 API key** in the server environment only. Use the ignored `server/.env.staging.local` for local staging. Add the key separately to the production server's environment when releasing. Never put it in a `REACT_APP_` variable. Kit account/sender settings should use Slow Comics and slow.comics.publishing@gmail.com; sender verification and any required account activation are managed in Kit.
 

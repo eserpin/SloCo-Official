@@ -505,7 +505,7 @@ export const Checkout = ({ digitalOnly = false }) => {
     country_code: "US",
     phone: "",
   });
-  const [newsletterOptIn, setNewsletterOptIn] = useState(pendingCheckout?.newsletterOptIn === true);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(pendingCheckout?.newsletterOptIn !== false);
   const [orderNote, setOrderNote] = useState(pendingCheckout?.orderNote || "");
   const [shippingPrice, setShippingPrice] = useState(pendingCheckout?.shippingPrice ?? null);
   const [validatedShippingAddress, setValidatedShippingAddress] = useState(null);

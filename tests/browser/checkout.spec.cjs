@@ -35,6 +35,33 @@ async function seed(page, cart = [book], shippingPrice = null, suppliedAddress =
 async function mockPayments(page) {
   await page.route('**/api/createPaymentIntent', route => route.fulfill({ json: { clientSecret: 'pi_test_secret_mock' } }));
 }
+
+for (const digital of [false, true]) {
+  test(`${digital ? 'digital' : 'physical'} newsletter defaults checked and preserves opt-out through retry and return`, async ({ page }) => {
+    await seed(page, [book], 8); await mockPayments(page);
+    await page.addInitScript(() => { window.__paymentFailure = true; });
+    const endpoint = digital ? 'placeDigitalOrder' : 'placeOrder';
+    const path = digital ? '/checkout/digital' : '/checkout';
+    let submitted;
+    await page.route(`**/api/${endpoint}`, route => { submitted = route.request().postDataJSON(); return route.fulfill({ json: {} }); });
+    await page.goto(path);
+    if (digital) {
+      await page.getByLabel('Your price (USD)', { exact: true }).fill('1');
+      await page.getByLabel('Name', { exact: true }).fill(address.name);
+      await page.getByLabel('Email', { exact: true }).fill(address.email);
+    }
+    const signup = page.getByRole('checkbox', { name: /Subscribe to our email list/ });
+    await expect(signup).toBeChecked();
+    await signup.uncheck();
+    await page.getByRole('button', { name: digital ? 'Pay $1.00' : 'Pay $35.00', exact: true }).click();
+    await expect(page.getByText('Your test card was declined.')).toBeVisible();
+    await page.reload();
+    await expect(signup).not.toBeChecked();
+    await page.goto(`${path}?payment_intent_client_secret=pi_browser_redirect_secret_mock`);
+    await expect(page).toHaveURL(/\/thank-you$/);
+    expect(submitted.newsletterOptIn).toBe(false);
+  });
+}
 test('product can be added to cart and quantity survives reload', async ({ page }) => {
   await page.goto('/buy/nandi-book');
   await page.getByRole('button', { name: 'Add to Cart', exact: true }).click();
@@ -94,7 +121,7 @@ test('successful physical payment submits standardized address and clears cart',
   await expect(page).toHaveURL(/\/thank-you$/);
   expect(submitted.address.street1).toBe(address.street1);
   expect(submitted.shippingPrice).toBe(8);
-  expect(submitted.newsletterOptIn).toBe(false);
+  expect(submitted.newsletterOptIn).toBe(true);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([]);
 });
 test('declined payment keeps cart and never calls fulfillment', async ({ page }) => {
@@ -127,7 +154,7 @@ test('direct digital checkout bypasses the cart and preserves its physical items
   await page.getByLabel('Name', { exact: true }).fill(address.name);
   await page.getByLabel('Email', { exact: true }).fill(address.email);
   await expect(page.getByRole('button', { name: 'Calculate Shipping' })).toHaveCount(0);
-  await expect(page.getByRole('checkbox', { name: /Subscribe to our email list/ })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /Subscribe to our email list/ })).toBeChecked();
   await page.getByRole('checkbox', { name: /Subscribe to our email list/ }).check();
   await page.getByRole('button', { name: 'Pay $23.45', exact: true }).click();
   await expect(page).toHaveURL(/\/thank-you$/);
