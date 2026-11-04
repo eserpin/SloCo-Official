@@ -13,7 +13,7 @@ const DigitalPriceField = ({ value, onChange, disabled = false, idPrefix = 'digi
       value={value} onChange={event => onChange(event.target.value)} disabled={disabled} required
       aria-describedby={`${id}-help${invalid ? ` ${id}-error` : ''}`} aria-invalid={invalid}
     /></div>
-    {invalid && <p className="field-error" id={`${id}-error`}>Enter between $1 and $10,000, with up to two decimal places.</p>}
+    {invalid && <p className="field-error" id={`${id}-error`}>Please provide an acceptable amount with up to 2 decimal places</p>}
   </section>;
 };
 
