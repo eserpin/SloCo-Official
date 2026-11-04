@@ -17,7 +17,7 @@ Implementation includes server-calculated prices, selected designs and shipping 
 
 Print packaging: up to five prints per package, always separate from the book package. One Ambassador Bundle uses two packages (book/stickers and prints).
 
-Validation: backend/React regressions, production build, desktop/mobile browser checks, and actual Stripe/Shippo/staging-database bundle runs completed November 3. All bundle designs, Canadian representatives, bulk print packing, captured emails, label PDFs, and completed-order retries passed. Fixed an international customs-description length rejection found during the run. PayPal buyer approval/capture, SMTP/inbox delivery, and deployment remain release checks. Details: [Sandbox results](SANDBOX_RESULTS.md#bundle-sandbox-verification--november-3-2026).
+Validation: backend/React regressions, production build, desktop/mobile browser checks, and actual Stripe/Shippo/staging-database bundle runs passed. November 4 deployed Preview tests passed all four bundles, Canadian Ambassador shipping, order/label creation, browser Stripe returns, thank-you/cart clearing, SMTP sending, duplicate retries, and simultaneous requests. The user confirmed receipt inbox arrival and correct contents/links. Fixed an international customs-description rejection and invalid bundle-choice HTTP status. Direct deployed card-entry verification awaits the user's human-verification checkout; PayPal buyer testing is deferred. Production release remains pending. Details: [Sandbox results](SANDBOX_RESULTS.md#deployed-preview-verification--november-4-2026).
 
 ## 2. Pay what you want for digital downloads — queued
 

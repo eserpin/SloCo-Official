@@ -25,7 +25,7 @@ async function inspectResponse(response, name) {
   assert.equal(response.status(), 200, `${name}: ${response.status()} ${body.error || body.details || ''}`);
   return body;
 }
-async function scenario(id, choice, expectedPackages, country = 'US', mobile = false) {
+async function scenario(id, choice, expectedPackages, country = 'US', mobile = false, cardEntry = false) {
   const context = await browser.newContext({ viewport: mobile ? { width: 412, height: 915 } : { width: 1440, height: 1000 } });
   const page = await context.newPage();
   page.setDefaultTimeout(45000);
@@ -67,14 +67,37 @@ async function scenario(id, choice, expectedPackages, country = 'US', mobile = f
     const intent = await stripe.paymentIntents.retrieve(paymentId);
     assert.equal(intent.livemode, false); assert.equal(intent.amount, Math.round(paymentData.total * 100));
     await stripe.paymentIntents.update(paymentId, { metadata: { deployedSandboxRun: runId } });
-    // Exercise the actual checkout button and its real Stripe validation. An empty
-    // card cannot charge; the application saves its own redirect state here.
+    // The default run checks Stripe return fulfillment with API-confirmed sandbox
+    // payments. `card` separately attempts the real card form and Pay button.
     const pay = page.getByRole('button', { name: /^Pay \$/ });
-    await pay.waitFor(); await pay.click();
-    await page.waitForFunction(() => Boolean(localStorage.getItem('slowComicsPendingCheckout')));
+    await pay.waitFor();
+    if (cardEntry) {
+      const find = async selector => {
+        for (let attempt = 0; attempt < 120; attempt++) {
+          for (const frame of page.frames().filter(f => f.url().startsWith('https://js.stripe.com/'))) {
+            const locator = selector(frame).first();
+            if (await locator.isVisible().catch(() => false)) return locator;
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        throw Error('Stripe card control unavailable; human verification may be required');
+      };
+      await (await find(f => f.getByText('Card', { exact: true }))).click();
+      await (await find(f => f.getByPlaceholder('1234 1234 1234 1234'))).fill('4242424242424242');
+      await (await find(f => f.getByPlaceholder('MM / YY'))).fill('1234');
+      await (await find(f => f.getByPlaceholder('CVC'))).fill('123');
+      for (const frame of page.frames()) {
+        const zip = frame.getByPlaceholder('12345').first();
+        if (await zip.isVisible().catch(() => false)) await zip.fill('94117');
+      }
+      entry.paymentMethod = 'Actual Stripe.js test card entry and Pay button';
+    } else {
+      await pay.click();
+      await page.waitForFunction(() => Boolean(localStorage.getItem('slowComicsPendingCheckout')));
+      const paid = await stripe.paymentIntents.confirm(paymentId, { payment_method: 'pm_card_visa', return_url: `${origin}/checkout` });
+      assert.equal(paid.status, 'succeeded');
+    }
     await page.screenshot({ path: path.join(directory, `${id}-${country}-checkout.png`), fullPage: true });
-    const paid = await stripe.paymentIntents.confirm(paymentId, { payment_method: 'pm_card_visa', return_url: `${origin}/checkout` });
-    assert.equal(paid.status, 'succeeded');
     let competitorTask;
     if (id === 'bundle-slow-comics-ambassador' && country === 'US') {
       page.on('request', request => {
@@ -96,9 +119,11 @@ async function scenario(id, choice, expectedPackages, country = 'US', mobile = f
       });
     }
     const fulfillmentPromise = page.waitForResponse(r => r.url().includes('/sandbox/api/placeOrder'), { timeout: 120000 });
-    await page.goto(`${origin}/checkout?payment_intent_client_secret=${encodeURIComponent(clientSecret)}`);
+    if (cardEntry) await pay.click();
+    else await page.goto(`${origin}/checkout?payment_intent_client_secret=${encodeURIComponent(clientSecret)}`);
     await inspectResponse(await fulfillmentPromise, 'Browser fulfillment');
     await page.waitForURL('**/thank-you', { timeout: 60000 });
+    assert.equal((await stripe.paymentIntents.retrieve(paymentId)).status, 'succeeded');
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart'))), []);
     await page.screenshot({ path: path.join(directory, `${id}-${country}-thank-you.png`), fullPage: true });
     if (competitorTask) {
@@ -136,6 +161,10 @@ async function scenario(id, choice, expectedPackages, country = 'US', mobile = f
 async function main() {
   browser = await chromium.launch({ channel: 'chrome', headless: true });
   const selected = process.argv[2];
+  if (selected === 'card') {
+    await scenario('bundle-book-sticker', 'dragon-sticker', 1, 'US', false, true);
+    return;
+  }
   if (selected === 'negative') {
     const context = await browser.newContext();
     const page = await context.newPage();

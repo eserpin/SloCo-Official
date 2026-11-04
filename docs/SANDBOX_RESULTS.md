@@ -155,4 +155,27 @@ The backend regression suite passed all 108 checks. Actual sandbox run `dfbb4935
 
 Using the configured Gmail sender, SMTP verification succeeded and both representative Ambassador customer/admin receipts were accepted for erenserpin@gmail.com, with no rejected recipients. Subjects begin `[SANDBOX TEST]`; no other address received these test emails. Provider message IDs/responses are retained in ignored `server/sandbox-results/bundle-smtp-verification.json`. The user confirmed both emails arrived and that the bundle contents, tracking links, and admin label links look correct.
 
-Preview prepared on branch `codex/bundle-release-checks`. Automatic approval review rejected uploading credentials to Vercel without specific user approval. An explicit request names the existing backend project, branch-only Preview scope, test credentials/Gmail app password, and test-recipient restriction. Deployment testing awaits that approval; production has not changed.
+Preview prepared on branch `codex/bundle-release-checks`. After the user specifically approved copying credentials to Vercel, the test settings were stored only in that branch's Preview environment. SMTP is restricted to erenserpin@gmail.com. Production has not changed.
+
+### Deployed preview verification — November 4, 2026
+
+Final application commit: `bbdc5b45a4c9b23f3362996fdb5fe9eea4373597`. Both projects reached READY as Preview deployments, with deployment protection retained:
+
+- Frontend: `dpl_66wER6heUgWGqVyhBBZCtnJVsKHC`, https://slo-co-official-nzlt-doz750l1j-eserpins-projects.vercel.app (React build about 22 seconds).
+- Backend: `dpl_49RNR9KiY45YnHwEg84TPYYo9XC1`, https://slo-co-official-g3vdohk7m-eserpins-projects.vercel.app (Express build about 33 seconds).
+
+All four bundles passed from deployed shop selection through cart, address entry, actual shipping quote/payment setup, Stripe return, saved order, test labels, emails, thank-you screen and cart clearing. Base-print and Canadian checks used mobile browser viewports. The Canadian Ambassador case charged both packages; domestic cases charged the highest package rate. Five initial purchases plus a final Ambassador smoke test produced six orders, eleven test labels with downloadable PDF signatures, and twelve SMTP-accepted emails with no rejected recipients. Read-back verified each label as a Shippo test-mode SUCCESS transaction and confirmed tracking-email timestamps.
+
+Deployed Ambassador tests sent five competing requests during the browser's fulfillment request. All five competitors returned `409 ORDER_PROCESSING`; the original succeeded. Saved rows, labels and SMTP logs showed no duplicates. Completed-order retries also passed. The test found invalid bundle designs returned HTTP 500; the final commit fixes this to HTTP 400 before payment creation. Deployed negative checks then passed for invalid designs (400), mixed digital/physical carts (400), and a declined card (fulfillment rejected, no order or labels). Public JavaScript did not contain the configured database, Stripe secret, Shippo or Kit key. All 109 backend regressions passed after the fix.
+
+These automated browser purchases used **Stripe sandbox API confirmation followed by the real Stripe.js return flow**, with no SDK or endpoint mocks. They do not establish direct card-entry/Pay-button completion. A separate actual card-entry attempt was blocked by Stripe's hCaptcha screen; the unpaid test PaymentIntent was canceled after verifying no order existed. A deployed manual card-entry test was requested from the user and remains pending. PayPal buyer testing is deferred at the user's request. Actual book-file downloads remain outside this bundle verification.
+
+Ignored evidence directories under `server/sandbox-results/`:
+
+- `deployed-15f44105-97da-440b-ab0b-7d179cace568`: sticker checkout.
+- `deployed-7f90b70b-a6cb-4425-936e-cfbd131b5a91`: US print/collectible/Ambassador and Canadian Ambassador, including deployed concurrency.
+- `deployed-d70deefc-c543-47cf-8838-753301008dc9`: final negative checks and client secret-exposure scan.
+- `deployed-d98cb8f7-e76a-4d1f-8def-1915e6a14172`: final-commit Ambassador smoke/concurrency test.
+- `deployed-307bb854-14c4-48c3-b9bd-d8d81f1a857a`: blocked card-entry attempt and hCaptcha frame diagnostics. Raw diagnostics contain test client secrets; do not publish them.
+
+Production deployment IDs and main commit were independently checked and remain `dpl_AWNWKy48ufn417b8pe3gM1p7YGbQ` / `dpl_GbfdHc7yLVkQvA6gf5s8Cbft8LzE`, commit `a07ea664fff7f31b736bfe76a7881a4a8d4fcb60`. No production deployment, live charge, or production database write occurred. Frontend and backend share links expire; renew the backend link and redeploy the frontend relay if preview access expires.
