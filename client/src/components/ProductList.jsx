@@ -98,7 +98,7 @@ const ProductList = () => {
 
         <div className="shop-sections">
           {productSections.map((section) => {
-            const sectionProducts = section.id === 'bundles' ? bundles.map(bundle => ({ ...bundle, type: 'Bundle', images: products[0].images })) : products.filter((product) =>
+            const sectionProducts = section.id === 'bundles' ? [...bundles].sort((a, b) => a.price - b.price).map(bundle => ({ ...bundle, type: 'Bundle', images: products[0].images })) : products.filter((product) =>
               section.types.includes(product.type)
             );
 
