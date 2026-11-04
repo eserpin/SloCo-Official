@@ -140,6 +140,7 @@ test('different designs stay separate, same designs merge, and books share a fou
   await expect(page.getByText(/Cart limit reached/)).toBeVisible();
   await page.getByLabel('Purchase option').selectOption('');
   await page.getByRole('radio', { name: 'Digital Copy (Download)' }).check();
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('20');
   await expect(page.getByRole('link', { name: 'Buy digital copy', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add to Cart', exact: true })).toHaveCount(0);
 });

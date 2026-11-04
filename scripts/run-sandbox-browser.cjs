@@ -47,11 +47,12 @@ async function run() {
   } }, physicalCart);
   await page.goto('http://127.0.0.1:4175/buy/nandi-book');
   await page.getByLabel('Digital Copy (Download)').check();
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('20');
   await page.getByRole('link', { name: 'Buy digital copy', exact: true }).click();
-  await page.waitForURL('**/checkout/digital');
+  await page.waitForURL('**/checkout/digital?amount=20.00');
   await page.getByLabel('Name', { exact: true }).fill('Sandbox Browser Test');
   await page.getByLabel('Email', { exact: true }).fill('checkout-test@example.com');
-  await page.getByRole('button', { name: 'Pay $27.00', exact: true }).waitFor({ timeout: 60000 });
+  await page.getByRole('button', { name: 'Pay $20.00', exact: true }).waitFor({ timeout: 60000 });
   await page.screenshot({ path: path.join(directory, `${runId}-digital-checkout.png`), fullPage: true });
   console.log('Actual React checkout loaded its Stripe sandbox payment form.');
   async function locateInStripeFrames(selector) {
@@ -78,7 +79,7 @@ async function run() {
     if (await postal.isVisible().catch(() => false)) await postal.fill('94117');
   }
   const responsePromise = page.waitForResponse(response => response.url().endsWith('/api/placeDigitalOrder'), { timeout: 60000 });
-  await page.getByRole('button', { name: 'Pay $27.00', exact: true }).click();
+  await page.getByRole('button', { name: 'Pay $20.00', exact: true }).click();
   const response = await responsePromise;
   if (response.status() !== 200) throw new Error(`Browser fulfillment returned ${response.status()}`);
   await page.waitForURL('**/thank-you', { timeout: 30000 });

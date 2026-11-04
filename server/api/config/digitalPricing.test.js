@@ -8,7 +8,7 @@ test('digital prices use exact whole cents with the $1 minimum and $10,000 share
     assert.equal(parseDigitalPrice(value), cents);
     assert.equal(getCartDetails([{ ...digital, unitAmountCents: cents, price: 0.01 }]).subtotalCents, cents);
   }
-  assert.equal(getCartDetails([digital]).subtotalCents, 2000);
+  assert.throws(() => getCartDetails([digital]), 'A price must be chosen explicitly');
   assert.equal(getCartDetails([{ ...digital, price: 27 }]).subtotalCents, 2700, 'Old checkout tabs retain their chosen amount');
 });
 test('rejects malformed, sub-minimum and fractional-cent digital amounts', () => {
@@ -19,7 +19,7 @@ test('rejects malformed, sub-minimum and fractional-cent digital amounts', () =>
     assert.throws(() => getCartDetails([{ ...digital, unitAmountCents }]));
   }
   assert.throws(() => getCartDetails([{ ...digital, quantity: 2 }]));
-  assert.throws(() => getCartDetails([digital, digital]));
+  assert.throws(() => getCartDetails([{ ...digital, unitAmountCents: 2000 }, { ...digital, unitAmountCents: 2000 }]));
 });
 test('customer-selected amounts cannot change physical or bundle prices', () => {
   assert.equal(getCartDetails([{ id: 'nandi-book', quantity: 1, price: 1, unitAmountCents: 100 }]).subtotal, 27);

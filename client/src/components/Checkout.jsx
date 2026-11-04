@@ -19,7 +19,8 @@ import countryCodes from "../assets/countryCodes";
 import { getShippingQuantities } from '../assets/cartProducts';
 import { products } from '../assets/productInfo';
 import PrintShippingNotice from './PrintShippingNotice';
-import { DEFAULT_DIGITAL_PRICE, MAX_DIGITAL_PRICE, getDigitalAmountCents } from '../assets/digitalPricing';
+import { DEFAULT_DIGITAL_PRICE, getDigitalAmountCents } from '../assets/digitalPricing';
+import DigitalPriceField from './DigitalPriceField';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || "");
 const paypalClientId = process.env.REACT_APP_PAYPAL_CLIENT_ID || "";
@@ -479,6 +480,11 @@ export const Checkout = ({ digitalOnly = false }) => {
   const baseCart = digitalOnly ? digitalCart : savedCart;
   const isDigitalCheckout = baseCart.length > 0 && baseCart.every(item => item.format === 'digital' && !item.requiresShipping);
   const [digitalPrice, setDigitalPrice] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get('amount');
+    if (!stripeReturnClientSecret && requested !== null) {
+      const cents = getDigitalAmountCents(requested);
+      return cents === null ? DEFAULT_DIGITAL_PRICE : (cents / 100).toFixed(2);
+    }
     const savedPrice = pendingCheckout?.cart?.find(item => item.format === 'digital')?.price;
     return savedPrice !== undefined && getDigitalAmountCents(savedPrice) !== null ? Number(savedPrice).toFixed(2) : DEFAULT_DIGITAL_PRICE;
   });
@@ -724,23 +730,16 @@ export const Checkout = ({ digitalOnly = false }) => {
         <div className="checkout-main">
 
         <form id="checkout-details" ref={checkoutFormRef} onSubmit={calculateShipping} noValidate>
-        {isDigitalCheckout && <section className="digital-price-choice" aria-labelledby="digital-price-heading">
-          <h2 id="digital-price-heading">Pay what you want</h2>
-          <p id="digital-price-help">$1 minimum. Change the amount to what works for you.</p>
-          <label htmlFor="digital-price">Your price (USD)</label>
-          <div className="digital-price-input"><span aria-hidden="true">$</span><input
-            id="digital-price" name="digitalPrice" type="number" inputMode="decimal" min="1" max={MAX_DIGITAL_PRICE} step="0.01"
-            value={digitalPrice} disabled={paymentBusy || Boolean(stripeReturnClientSecret)}
-            aria-describedby={`digital-price-help${digitalAmountCents === null ? ' digital-price-error' : ''}`}
-            aria-invalid={digitalAmountCents === null}
-            onChange={event => {
+        {isDigitalCheckout && <DigitalPriceField value={digitalPrice} disabled={paymentBusy || Boolean(stripeReturnClientSecret)}
+            onChange={value => {
               latestPaymentIntentKey.current = null;
               setClientSecret(null); setPaymentIntentLoading(false); setFailedPaymentIntentKey(null); setError(null);
-              setDigitalPrice(event.target.value);
+              setDigitalPrice(value);
+              const params = new URLSearchParams(window.location.search);
+              params.set('amount', value);
+              history.replace(`${window.location.pathname}?${params.toString()}`);
             }}
-          /></div>
-          {digitalAmountCents === null && <p className="field-error" id="digital-price-error">Enter between $1 and $10,000, with up to two decimal places.</p>}
-        </section>}
+        />}
         <div className="address-form">
           <label>
             Name

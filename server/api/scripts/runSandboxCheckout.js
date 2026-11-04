@@ -252,7 +252,7 @@ async function main() {
   }
   if (process.argv.includes('--digital-pricing')) {
     for (const cents of [100, 2000, 2345]) {
-      await attempt(`Pay what you want $${(cents / 100).toFixed(2)}: paid order, stored amount, receipts, retry and mismatch rejection`, () => digitalSuccess(cents));
+      await attempt(`Pay what you wish $${(cents / 100).toFixed(2)}: paid order, stored amount, receipts, retry and mismatch rejection`, () => digitalSuccess(cents));
     }
     return;
   }

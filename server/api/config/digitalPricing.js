@@ -1,4 +1,3 @@
-const DEFAULT_DIGITAL_AMOUNT_CENTS = 2000;
 const MIN_DIGITAL_AMOUNT_CENTS = 100;
 // PayPal may cap verified-account transactions at $10,000, below Stripe's
 // USD ceiling. Use that conservative shared checkout cap.
@@ -23,7 +22,7 @@ const getDigitalUnitAmountCents = item => {
   }
   // Older open checkout tabs sent price only; validate that amount rather than
   // silently changing an already-selected/paid price during rollout.
-  return item.price === undefined ? DEFAULT_DIGITAL_AMOUNT_CENTS : parseDigitalPrice(item.price);
+  return parseDigitalPrice(item.price);
 };
 
-module.exports = { DEFAULT_DIGITAL_AMOUNT_CENTS, MIN_DIGITAL_AMOUNT_CENTS, MAX_DIGITAL_AMOUNT_CENTS, parseDigitalPrice, getDigitalUnitAmountCents };
+module.exports = { MIN_DIGITAL_AMOUNT_CENTS, MAX_DIGITAL_AMOUNT_CENTS, parseDigitalPrice, getDigitalUnitAmountCents };

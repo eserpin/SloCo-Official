@@ -190,15 +190,15 @@ Recorded outcomes: [Sandbox verification results](SANDBOX_RESULTS.md).
 
 ## Concurrent order requests and receipt delivery
 
-## Pay what you want for digital downloads
+## Pay what you wish for digital downloads
 
 Run `npm --prefix server run test:sandbox -- --digital-pricing` for real Stripe test purchases at $1, $20 and $23.45, saved paid amounts, canonical receipts, token creation, safe retries and post-payment amount-mismatch rejection. `--digital-price-bounds` checks rejection below $1/above $10,000 and creates then cancels an uncharged Stripe test setup at the maximum. Both use the isolated staging database and captured emails.
 
-Digital pricing uses validated integer `unitAmountCents`; new checkout defaults to $20 and accepts $1–$10,000 USD. This is the conservative shared cap selected after reviewing [Stripe USD limits](https://docs.stripe.com/currencies#maximum-charge-amounts) and [PayPal sending limits](https://securepayments.paypal.com/us/cshelp/article/what%E2%80%98s-the-maximum-amount-i-can-send-with-my-paypal-account-help286). Individual buyer/card limits may be lower. Physical/bundle prices remain catalog-controlled. Older open digital tabs sending only `price` remain supported after strict amount validation.
+Digital pricing uses validated integer `unitAmountCents`; the buy page and checkout start blank and accept $1–$10,000 USD. A valid buy-page amount is passed as the checkout amount query parameter; checkout edits update that parameter to preserve the choice on reload. Saved payment-return state takes precedence over the query parameter. This is the conservative shared cap selected after reviewing [Stripe USD limits](https://docs.stripe.com/currencies#maximum-charge-amounts) and [PayPal sending limits](https://securepayments.paypal.com/us/cshelp/article/what%E2%80%98s-the-maximum-amount-i-can-send-with-my-paypal-account-help286). Individual buyer/card limits may be lower. Physical/bundle prices remain catalog-controlled. Older open digital tabs sending only `price` remain supported after strict amount validation.
 
 Digital payment setup prepares nullable `digital_orders.amount_paid_cents BIGINT` and `currency TEXT` columns before creating a PaymentIntent. Schema failure therefore blocks setup before a charge; retry can recover. Existing rows are left unknown until a verified retry backfills them. Deploy the backend before the frontend. Stripe fulfillment checks exact paid cents, USD and digital payment metadata; receipts and persisted values use the server-resolved amount. PayPal payload amounts are tested; real PayPal buyer capture is still deferred.
 
-Browser checks cover editable defaults/bounds, exact cents, summary/payment refresh, provider errors without retry loops, old setup responses, amount locking during payment, redirect amount restoration, single completion, and preserving physical cart/pending checkout. The public-facing download window and four-download allowance are unchanged.
+Browser checks cover blank defaults, buy-page amount transfer/editing/reload, required explicit prices and bounds, exact cents, summary/payment refresh, provider errors without retry loops, old setup responses, amount locking during payment, redirect amount restoration, single completion, and preserving physical cart/pending checkout. The public-facing download window and four-download allowance are unchanged.
 
 ## Concurrent order requests and receipt delivery
 

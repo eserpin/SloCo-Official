@@ -8,6 +8,8 @@ import { products } from "../assets/productInfo";
 import { bundles, makeBundleItem, getMaxQuantity, getContentsText } from '../assets/cartProducts';
 import BundleCollage from './BundleCollage';
 import PrintShippingNotice from './PrintShippingNotice';
+import DigitalPriceField from './DigitalPriceField';
+import { getDigitalAmountCents } from '../assets/digitalPricing';
 
 const BuyProduct = () => {
   const { productId } = useParams();
@@ -26,6 +28,8 @@ const BuyProduct = () => {
   const [added, setAdded] = useState(false);
   const [bundleId, setBundleId] = useState('');
   const [choiceProductId, setChoiceProductId] = useState('');
+  const [digitalPrice, setDigitalPrice] = useState('');
+  const digitalAmountCents = getDigitalAmountCents(digitalPrice);
   const selectedBundle = availableBundles.find(bundle => bundle.id === bundleId);
   const bundleIncludesPrints = selectedBundle && [...selectedBundle.productIds, ...(selectedBundle.includedProductIds || [])]
     .some(id => products.find(product => product.id === id)?.type === 'Print');
@@ -45,6 +49,7 @@ const BuyProduct = () => {
     setFormat('physical');
     setQuantity(1);
     setAdded(false);
+    setDigitalPrice('');
   }, [productId, location.search, productData]);
 
   useEffect(() => {
@@ -245,18 +250,15 @@ const BuyProduct = () => {
                 </span>
               </div>
             ) : (
-              <div className="price">
-                <span className="discount-price">
-                  Pay what you want
-                  <small className="bundle-value">Digital download · $1 minimum</small>
-                </span>
-              </div>
+              <DigitalPriceField value={digitalPrice} onChange={setDigitalPrice} idPrefix="buy-digital" />
             )}
           </div>
 
           {format === 'digital' ? <>
-            <p className="digital-purchase-note">Choose your price at checkout. Your download link is emailed after payment, and items in your cart stay there.</p>
-            <Link to="/checkout/digital" className="checkout-button digital-buy-button">Buy digital copy</Link>
+            <p className="digital-purchase-note">Your download link is emailed after payment, and items in your cart stay there.</p>
+            {digitalAmountCents !== null
+              ? <Link to={`/checkout/digital?amount=${(digitalAmountCents / 100).toFixed(2)}`} className="checkout-button digital-buy-button">Buy digital copy</Link>
+              : <button type="button" className="checkout-button digital-buy-button" disabled>Buy digital copy</button>}
           </> : <button onClick={handleAddToCart} className="checkout-button"
             disabled={Boolean(selectedBundle?.choiceLabel && !choiceProductId) || availableQuantity === 0}>
             {added ? "Added!" : "Add to Cart"}

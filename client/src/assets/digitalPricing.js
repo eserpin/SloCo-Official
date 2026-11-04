@@ -1,4 +1,4 @@
-export const DEFAULT_DIGITAL_PRICE = '20.00';
+export const DEFAULT_DIGITAL_PRICE = '';
 export const MAX_DIGITAL_PRICE = 10000;
 
 export const getDigitalAmountCents = value => {

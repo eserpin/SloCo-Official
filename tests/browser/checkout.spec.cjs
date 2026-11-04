@@ -117,20 +117,24 @@ test('direct digital checkout bypasses the cart and preserves its physical items
   await page.goto('/buy/nandi-book');
   await page.getByRole('radio', { name: 'Digital Copy (Download)' }).check();
   await expect(page.getByRole('button', { name: 'Add to Cart', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Your price (USD)', { exact: true })).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Buy digital copy', exact: true })).toBeDisabled();
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('23.45');
   await page.getByRole('link', { name: 'Buy digital copy', exact: true }).click();
-  await expect(page).toHaveURL(/\/checkout\/digital$/);
+  await expect(page).toHaveURL(/\/checkout\/digital\?amount=23\.45$/);
+  await expect(page.getByLabel('Your price (USD)', { exact: true })).toHaveValue('23.45');
   await expect(page.getByRole('heading', { name: 'Digital checkout', exact: true })).toBeVisible();
   await page.getByLabel('Name', { exact: true }).fill(address.name);
   await page.getByLabel('Email', { exact: true }).fill(address.email);
   await expect(page.getByRole('button', { name: 'Calculate Shipping' })).toHaveCount(0);
   await expect(page.getByRole('checkbox', { name: /Subscribe to our email list/ })).not.toBeChecked();
   await page.getByRole('checkbox', { name: /Subscribe to our email list/ }).check();
-  await page.getByRole('button', { name: 'Pay $20.00', exact: true }).click();
+  await page.getByRole('button', { name: 'Pay $23.45', exact: true }).click();
   await expect(page).toHaveURL(/\/thank-you$/);
   expect(submitted.newsletterOptIn).toBe(true);
   expect(submitted.cartItems).toHaveLength(1);
   expect(submitted.cartItems[0]).toMatchObject({ id: 'nandi-book', format: 'digital', requiresShipping: false, quantity: 1 });
-  expect(submitted.shippingPrice).toBe(0); expect(submitted.total).toBe(20); expect(shippingCalls).toBe(0);
+  expect(submitted.shippingPrice).toBe(0); expect(submitted.total).toBe(23.45); expect(shippingCalls).toBe(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([book]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsPendingCheckout')).shippingPrice)).toBe(8);
   expect(await page.evaluate(() => localStorage.getItem('slowComicsPendingDigitalCheckout'))).toBeNull();
@@ -142,6 +146,7 @@ test('declined direct digital payment leaves physical cart intact', async ({ pag
   let fulfilled = false;
   await page.route('**/api/placeDigitalOrder', route => { fulfilled = true; return route.abort(); });
   await page.goto('/checkout/digital');
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('20');
   await page.getByLabel('Name', { exact: true }).fill(address.name);
   await page.getByLabel('Email', { exact: true }).fill(address.email);
   await page.getByRole('button', { name: 'Pay $20.00', exact: true }).click();
@@ -156,7 +161,7 @@ test('direct digital Stripe return restores its own checkout and preserves physi
     cart: [{ ...book, price: 23.45, unitAmountCents: 2345, format: 'digital', requiresShipping: false }] })), { address, book });
   let submitted;
   await page.route('**/api/placeDigitalOrder', route => { submitted = route.request().postDataJSON(); return route.fulfill({ json: { message: 'Digital order placed' } }); });
-  await page.goto('/checkout/digital?payment_intent_client_secret=pi_browser_redirect_secret_mock');
+  await page.goto('/checkout/digital?amount=1&payment_intent_client_secret=pi_browser_redirect_secret_mock');
   await expect(page).toHaveURL(/\/thank-you$/);
   expect(submitted.transactionId).toBe('pi_browser_redirect');
   expect(submitted.newsletterOptIn).toBe(true);
@@ -167,18 +172,19 @@ test('direct digital Stripe return restores its own checkout and preserves physi
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsPendingCheckout')).shippingPrice)).toBe(8);
 });
 
-test('pay what you want defaults to $20 and accepts amounts from $1 through $10,000', async ({ page }) => {
+test('pay what you wish starts blank and accepts amounts from $1 through $10,000', async ({ page }) => {
   await seed(page); let requests = [], order;
   await page.route('**/api/createPaymentIntent', route => { requests.push(route.request().postDataJSON()); return route.fulfill({ json: { clientSecret: 'pi_test_secret_mock' } }); });
   await page.route('**/api/placeDigitalOrder', route => { order = route.request().postDataJSON(); return route.fulfill({ json: {} }); });
   await page.goto('/checkout/digital');
-  await expect(page.getByRole('heading', { name: 'Pay what you want', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pay what you wish', exact: true })).toBeVisible();
   const price = page.getByLabel('Your price (USD)', { exact: true });
-  await expect(price).toHaveValue('20.00'); expect(await price.getAttribute('max')).toBe('10000');
+  await expect(price).toHaveValue(''); expect(await price.getAttribute('max')).toBe('10000');
   await page.getByLabel('Name', { exact: true }).fill(address.name);
   await page.getByLabel('Email', { exact: true }).fill(address.email);
-  await expect(page.getByRole('button', { name: 'Pay $20.00', exact: true })).toBeVisible();
-  for (const value of ['', '0.99', '-1', '20.001', '10000.01', '1e3']) {
+  await expect(page.getByRole('button', { name: /^Pay \$/ })).toHaveCount(0);
+  expect(requests).toHaveLength(0);
+  for (const value of ['0.99', '-1', '20.001', '10000.01', '1e3']) {
     await price.fill(value);
     await expect(page.getByText('Enter between $1 and $10,000, with up to two decimal places.')).toBeVisible();
     await expect(page.getByRole('button', { name: /^Pay \$/ })).toHaveCount(0);
@@ -204,6 +210,7 @@ test('a stale setup response cannot restore the previous digital price', async (
     await route.fulfill({ json: { clientSecret: `pi_${data.total}_secret_mock` } });
   });
   await page.goto('/checkout/digital');
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('20');
   await page.getByLabel('Name', { exact: true }).fill(address.name);
   await page.getByLabel('Email', { exact: true }).fill(address.email);
   await started;
@@ -212,6 +219,24 @@ test('a stale setup response cannot restore the previous digital price', async (
   release(); await response;
   await expect(page.getByRole('button', { name: 'Pay $1.00', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Pay $20.00', exact: true })).toHaveCount(0);
+});
+
+test('buy-page price fills checkout, remains editable and survives reload', async ({ page }) => {
+  await seed(page); await mockPayments(page);
+  await page.goto('/buy/nandi-book');
+  await page.getByRole('radio', { name: 'Digital Copy (Download)' }).check();
+  await expect(page.getByRole('heading', { name: 'Pay what you wish', exact: true })).toBeVisible();
+  const amount = page.getByLabel('Your price (USD)', { exact: true });
+  await expect(amount).toHaveValue('');
+  await amount.fill('0.99');
+  await expect(page.getByRole('button', { name: 'Buy digital copy', exact: true })).toBeDisabled();
+  await amount.fill('12.34');
+  await page.getByRole('link', { name: 'Buy digital copy', exact: true }).click();
+  await expect(page.getByLabel('Your price (USD)', { exact: true })).toHaveValue('12.34');
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('7.89');
+  await page.reload();
+  await expect(page.getByLabel('Your price (USD)', { exact: true })).toHaveValue('7.89');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('slowComicsCart')))).toEqual([book]);
 });
 
 test('provider amount rejection is shown once and permits editing the price', async ({ page }) => {
@@ -242,6 +267,7 @@ test('digital amount locks while payment is being fulfilled', async ({ page }) =
     });
   });
   await page.goto('/checkout/digital');
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('20');
   await page.getByLabel('Name', { exact: true }).fill(address.name);
   await page.getByLabel('Email', { exact: true }).fill(address.email);
   await page.getByRole('button', { name: 'Pay $20.00', exact: true }).click();
@@ -256,6 +282,7 @@ test('digital checkout skips shipping and uses the digital fulfillment endpoint'
   let submitted;
   await page.route('**/api/placeDigitalOrder', async route => { submitted = route.request().postDataJSON(); await route.fulfill({ json: {} }); });
   await page.goto('/checkout');
+  await page.getByLabel('Your price (USD)', { exact: true }).fill('20');
   await expect(page.getByRole('button', { name: 'Calculate Shipping' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Pay $20.00', exact: true }).click();
   await expect(page).toHaveURL(/\/thank-you$/);

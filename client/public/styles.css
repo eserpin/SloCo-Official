@@ -688,6 +688,7 @@
   .digital-price-input { display: flex; align-items: center; gap: 8px; font-size: 1.35rem; }
   .digital-price-input input { box-sizing: border-box; width: 180px; max-width: 100%; padding: 10px; border: 1px solid #b7c9ba; border-radius: 4px; font: inherit; }
   .digital-price-input input:focus-visible { outline: 2px solid #4a548a; outline-offset: 2px; }
+  .digital-buy-button:disabled { opacity: .55; cursor: not-allowed; }
   .digital-price-choice .field-error { margin-top: 8px; margin-bottom: 0; color: #a12727; }
   @media (max-width: 1023px) {
     .checkout-container { max-width: 640px; }
