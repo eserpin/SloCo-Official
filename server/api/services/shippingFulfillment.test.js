@@ -188,14 +188,28 @@ test("createShipments builds the book and sticker package used by quotes and ord
     parcels: [
       {
         weight: "3.32",
-        length: "9",
-        width: "9",
-        height: "5",
+        length: "10",
+        width: "7",
+        height: "2",
         massUnit: "lb",
         distanceUnit: "in",
       },
     ],
   });
+});
+
+test("book parcel sizes follow the new two- and five-book cutoffs", () => {
+  for (const [bookQuantity, expected] of [
+    [1, ["10", "7", "2"]],
+    [2, ["10", "7", "2"]],
+    [3, ["9", "9", "5"]],
+    [4, ["9", "9", "5"]],
+    [5, ["9", "9", "5"]],
+    [6, ["10", "7.5", "1"]],
+  ]) {
+    const [{ parcel }] = getShipmentConfigs({ bookQuantity });
+    assert.deepEqual([parcel.length, parcel.width, parcel.height], expected, `${bookQuantity} books`);
+  }
 });
 
 test("createShipments builds one print shipment for every five prints", async () => {

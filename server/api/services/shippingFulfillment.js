@@ -122,6 +122,11 @@ const getShipmentConfigs = ({
   const shipmentConfigs = [];
 
   if (bookQuantity > 0) {
+    const dimensions = bookQuantity <= 2
+      ? { length: "10", width: "7", height: "2" }
+      : bookQuantity <= 5
+        ? { length: "9", width: "9", height: "5" }
+        : { length: "10", width: "7.5", height: "1" };
     const bookWeight = 1.6 * bookQuantity;
     const stickerWeight = 0.04 * otherPhysicalQuantity;
     const totalWeight = bookWeight + stickerWeight;
@@ -152,9 +157,7 @@ const getShipmentConfigs = ({
     shipmentConfigs.push({
       parcel: {
         weight: totalWeight.toFixed(2),
-        length: bookQuantity >= 2 && bookQuantity <= 4 ? "9" : "10",
-        width: bookQuantity >= 2 && bookQuantity <= 4 ? "9" : "7.5",
-        height: bookQuantity >= 2 && bookQuantity <= 4 ? "5" : "1",
+        ...dimensions,
         massUnit: "lb",
         distanceUnit: "in",
       },
