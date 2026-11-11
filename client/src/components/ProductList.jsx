@@ -10,14 +10,14 @@ import BundleCollage from './BundleCollage';
 
 const productSections = [
   {
-    id: "bundles",
-    label: "Bundles",
-    types: ["Bundle"],
-  },
-  {
     id: "graphic-novels-comics",
     label: "Graphic Novels/Comics",
     types: ["Graphic Novel", "Comic"],
+  },
+  {
+    id: "bundles",
+    label: "Bundles",
+    types: ["Bundle"],
   },
   {
     id: "prints",
